@@ -205,16 +205,28 @@ export default function CreateCampaign() {
             accept="video/*"
             onChange={handleVideoChange}
           />
-          {videoFile && (
-            <span style={styles.fileNote}>
-              {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)}MB)
-            </span>
-          )}
         </label>
 
-        {stage === 'uploading' && (
-          <div style={styles.progressBarBg}>
-            <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%` }} />
+        {videoFile && (
+          <div style={styles.videoCard}>
+            <div style={styles.videoCardTop}>
+              <span style={styles.videoIcon}>🎥</span>
+              <div style={styles.videoInfo}>
+                <div style={styles.videoName}>{videoFile.name}</div>
+                <div style={styles.videoMeta}>{(videoFile.size / 1024 / 1024).toFixed(1)}MB</div>
+              </div>
+              <span style={styles.videoStatusBadge(stage)}>
+                {stage === 'uploading' ? `${uploadProgress}%` : stage === 'publishing' || stage === 'idle' && videoFile ? 'Ready' : ''}
+              </span>
+            </div>
+            {stage === 'uploading' && (
+              <>
+                <div style={styles.progressBarBg}>
+                  <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%` }} />
+                </div>
+                <div style={styles.uploadingLabel}>Uploading video… {uploadProgress}%</div>
+              </>
+            )}
           </div>
         )}
 
@@ -323,6 +335,40 @@ const styles = {
   label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 600, width: '100%' },
   input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15, fontWeight: 400, boxSizing: 'border-box' },
   fileNote: { fontSize: 12.5, color: '#666', fontWeight: 400 },
+  videoCard: {
+    background: '#fff',
+    border: '1.5px solid #e0e0e0',
+    borderRadius: 12,
+    padding: 14,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  videoCardTop: { display: 'flex', alignItems: 'center', gap: 12 },
+  videoIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    background: '#f4f9f4',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: 18,
+    flexShrink: 0,
+  },
+  videoInfo: { flex: 1, minWidth: 0 },
+  videoName: { fontSize: 13.5, fontWeight: 600, color: '#222', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+  videoMeta: { fontSize: 12, color: '#888', fontWeight: 400 },
+  videoStatusBadge: (stage) => ({
+    fontSize: 12,
+    fontWeight: 700,
+    padding: '4px 10px',
+    borderRadius: 999,
+    background: stage === 'uploading' ? '#fff4e0' : '#e8f5ea',
+    color: stage === 'uploading' ? '#b5750a' : '#1a7d3c',
+    flexShrink: 0,
+  }),
+  uploadingLabel: { fontSize: 12.5, color: '#b5750a', fontWeight: 600 },
   progressBarBg: { background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' },
   progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.2s' },
   calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 },
