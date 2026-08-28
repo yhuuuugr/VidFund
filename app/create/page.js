@@ -16,12 +16,52 @@ const CATEGORIES = [
   { id: 'school', label: 'School project', emoji: '📚' },
 ];
 
+const MAX_VIDEO_MB = 50; // Supabase free-tier default per-file limit
+
 function slugify(text) {
   return text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '')
     .slice(0, 40);
+}
+
+// Uploads directly to Supabase Storage's REST endpoint (instead of the
+// supabase-js helper) so we get real upload progress events — the
+// supabase-js client doesn't expose progress, which is why publishing
+// looked frozen on slow mobile uploads with no feedback.
+function uploadVideoWithProgress(file, onProgress) {
+  return new Promise((resolve, reject) => {
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const fileName = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
+    const uploadUrl = `${projectUrl}/storage/v1/object/campaign-videos/${encodeURIComponent(fileName)}`;
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', uploadUrl);
+    xhr.setRequestHeader('apikey', anonKey);
+    xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.timeout = 120000; // 2 minutes — fail loudly instead of hanging forever
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${encodeURIComponent(fileName)}`;
+        resolve(publicUrl);
+      } else {
+        reject(new Error(`Video upload failed (${xhr.status}). Try a smaller file or check your connection.`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Network error during video upload. Check your connection and try again.'));
+    xhr.ontimeout = () => reject(new Error('Video upload timed out. Try a shorter clip or a stronger connection.'));
+
+    xhr.send(file);
+  });
 }
 
 export default function CreateCampaign() {
@@ -32,20 +72,21 @@ export default function CreateCampaign() {
   const [videoFile, setVideoFile] = useState(null);
   const [suggestedAmount, setSuggestedAmount] = useState(2);
 
-  // Creator can specify the goal either as a target total amount (₵)
-  // or as a target number of supporters — whichever is more intuitive for them.
   const [goalMode, setGoalMode] = useState('amount'); // 'amount' | 'people'
   const [targetAmount, setTargetAmount] = useState(8000);
   const [targetPeople, setTargetPeople] = useState(4000);
 
   const [creatorName, setCreatorName] = useState('');
   const [momoNumber, setMomoNumber] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+
+  // Distinct stages so the person always knows what's happening —
+  // this replaces a single "Publishing..." state that gave no feedback.
+  const [stage, setStage] = useState('idle'); // idle | uploading | publishing
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState('');
 
   const suggested = Number(suggestedAmount) || 0;
 
-  // Whichever field the creator is editing drives the other, purely for display.
   const derivedPeople = useMemo(() => {
     if (goalMode === 'people') return Number(targetPeople) || 0;
     if (!suggested) return 0;
@@ -57,27 +98,32 @@ export default function CreateCampaign() {
     return suggested * (Number(targetPeople) || 0);
   }, [goalMode, targetAmount, targetPeople, suggested]);
 
+  function handleVideoChange(e) {
+    const file = e.target.files?.[0] || null;
+    setError('');
+    if (file && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      setError(`That video is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Keep it under ${MAX_VIDEO_MB}MB — try a shorter clip.`);
+      setVideoFile(null);
+      e.target.value = '';
+      return;
+    }
+    setVideoFile(file);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    setSubmitting(true);
     setError('');
 
     try {
       let videoUrl = null;
 
       if (videoFile) {
-        const fileName = `${nanoid()}-${videoFile.name}`;
-        const { data, error: uploadError } = await supabase.storage
-          .from('campaign-videos')
-          .upload(fileName, videoFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage
-          .from('campaign-videos')
-          .getPublicUrl(data.path);
-        videoUrl = publicUrlData.publicUrl;
+        setStage('uploading');
+        setUploadProgress(0);
+        videoUrl = await uploadVideoWithProgress(videoFile, setUploadProgress);
       }
+
+      setStage('publishing');
 
       const slug = `${slugify(title)}-${nanoid(5)}`;
       const targetUnits = derivedPeople;
@@ -99,10 +145,14 @@ export default function CreateCampaign() {
       router.push(`/create/success?slug=${slug}`);
     } catch (err) {
       setError(err.message || 'Something went wrong. Try again.');
-    } finally {
-      setSubmitting(false);
+      setStage('idle');
     }
   }
+
+  const submitting = stage !== 'idle';
+  let buttonLabel = 'Publish fundraiser';
+  if (stage === 'uploading') buttonLabel = `Uploading video… ${uploadProgress}%`;
+  if (stage === 'publishing') buttonLabel = 'Creating your page…';
 
   return (
     <main style={styles.page}>
@@ -148,14 +198,25 @@ export default function CreateCampaign() {
         </label>
 
         <label style={styles.label}>
-          Video (shown first, autoplays muted)
+          Video (shown first, autoplays muted) — max {MAX_VIDEO_MB}MB
           <input
             style={styles.input}
             type="file"
             accept="video/*"
-            onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+            onChange={handleVideoChange}
           />
+          {videoFile && (
+            <span style={styles.fileNote}>
+              {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(1)}MB)
+            </span>
+          )}
         </label>
+
+        {stage === 'uploading' && (
+          <div style={styles.progressBarBg}>
+            <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%` }} />
+          </div>
+        )}
 
         <div style={styles.calcBox}>
           <label style={styles.label}>
@@ -247,7 +308,7 @@ export default function CreateCampaign() {
         {error && <p style={styles.error}>{error}</p>}
 
         <button style={styles.submitBtn} type="submit" disabled={submitting}>
-          {submitting ? 'Publishing…' : 'Publish fundraiser'}
+          {buttonLabel}
         </button>
       </form>
     </main>
@@ -261,6 +322,9 @@ const styles = {
   form: { display: 'flex', flexDirection: 'column', gap: 16 },
   label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 600, width: '100%' },
   input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15, fontWeight: 400, boxSizing: 'border-box' },
+  fileNote: { fontSize: 12.5, color: '#666', fontWeight: 400 },
+  progressBarBg: { background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' },
+  progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.2s' },
   calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 },
   toggleRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
   toggleBtn: {
