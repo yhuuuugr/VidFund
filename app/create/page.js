@@ -31,16 +31,31 @@ export default function CreateCampaign() {
   const [category, setCategory] = useState('emergency');
   const [videoFile, setVideoFile] = useState(null);
   const [suggestedAmount, setSuggestedAmount] = useState(2);
-  const [targetUnits, setTargetUnits] = useState(4000);
+
+  // Creator can specify the goal either as a target total amount (₵)
+  // or as a target number of supporters — whichever is more intuitive for them.
+  const [goalMode, setGoalMode] = useState('amount'); // 'amount' | 'people'
+  const [targetAmount, setTargetAmount] = useState(8000);
+  const [targetPeople, setTargetPeople] = useState(4000);
+
   const [creatorName, setCreatorName] = useState('');
   const [momoNumber, setMomoNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const projectedTotal = useMemo(
-    () => (Number(suggestedAmount) || 0) * (Number(targetUnits) || 0),
-    [suggestedAmount, targetUnits]
-  );
+  const suggested = Number(suggestedAmount) || 0;
+
+  // Whichever field the creator is editing drives the other, purely for display.
+  const derivedPeople = useMemo(() => {
+    if (goalMode === 'people') return Number(targetPeople) || 0;
+    if (!suggested) return 0;
+    return Math.ceil((Number(targetAmount) || 0) / suggested);
+  }, [goalMode, targetPeople, targetAmount, suggested]);
+
+  const derivedTotal = useMemo(() => {
+    if (goalMode === 'amount') return Number(targetAmount) || 0;
+    return suggested * (Number(targetPeople) || 0);
+  }, [goalMode, targetAmount, targetPeople, suggested]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -65,6 +80,7 @@ export default function CreateCampaign() {
       }
 
       const slug = `${slugify(title)}-${nanoid(5)}`;
+      const targetUnits = derivedPeople;
 
       const { error: insertError } = await supabase.from('campaigns').insert({
         slug,
@@ -72,8 +88,8 @@ export default function CreateCampaign() {
         story,
         category,
         video_url: videoUrl,
-        suggested_amount: Number(suggestedAmount),
-        target_units: Number(targetUnits),
+        suggested_amount: suggested,
+        target_units: targetUnits,
         creator_name: creatorName,
         creator_momo_number: momoNumber,
       });
@@ -142,35 +158,68 @@ export default function CreateCampaign() {
         </label>
 
         <div style={styles.calcBox}>
-          <div style={styles.calcRow}>
+          <label style={styles.label}>
+            Suggested amount per person (₵)
+            <input
+              style={styles.input}
+              type="number"
+              min="1"
+              step="0.5"
+              value={suggestedAmount}
+              onChange={(e) => setSuggestedAmount(e.target.value)}
+              required
+            />
+          </label>
+
+          <div style={styles.toggleRow}>
+            <button
+              type="button"
+              onClick={() => setGoalMode('amount')}
+              style={{ ...styles.toggleBtn, ...(goalMode === 'amount' ? styles.toggleBtnActive : {}) }}
+            >
+              Set a target amount
+            </button>
+            <button
+              type="button"
+              onClick={() => setGoalMode('people')}
+              style={{ ...styles.toggleBtn, ...(goalMode === 'people' ? styles.toggleBtnActive : {}) }}
+            >
+              Set number of people
+            </button>
+          </div>
+
+          {goalMode === 'amount' ? (
             <label style={styles.label}>
-              Suggested amount per person (₵)
+              Target amount (₵)
               <input
                 style={styles.input}
                 type="number"
                 min="1"
-                step="0.5"
-                value={suggestedAmount}
-                onChange={(e) => setSuggestedAmount(e.target.value)}
+                value={targetAmount}
+                onChange={(e) => setTargetAmount(e.target.value)}
                 required
               />
             </label>
+          ) : (
             <label style={styles.label}>
               How many people
               <input
                 style={styles.input}
                 type="number"
                 min="1"
-                value={targetUnits}
-                onChange={(e) => setTargetUnits(e.target.value)}
+                value={targetPeople}
+                onChange={(e) => setTargetPeople(e.target.value)}
                 required
               />
             </label>
-          </div>
+          )}
+
           <p style={styles.calcNote}>
-            Small money combines to be big: ₵{Number(suggestedAmount || 0).toFixed(2)} ×{' '}
-            {Number(targetUnits || 0).toLocaleString()} people ={' '}
-            <strong>₵{projectedTotal.toLocaleString()}</strong>
+            {goalMode === 'amount' ? (
+              <>Needs about <strong>{derivedPeople.toLocaleString()}</strong> people giving ₵{suggested.toFixed(2)} each to reach <strong>₵{derivedTotal.toLocaleString()}</strong></>
+            ) : (
+              <>Small money combines to be big: ₵{suggested.toFixed(2)} × {derivedPeople.toLocaleString()} people = <strong>₵{derivedTotal.toLocaleString()}</strong></>
+            )}
           </p>
         </div>
 
@@ -210,11 +259,24 @@ const styles = {
   h1: { fontSize: 24, marginBottom: 4 },
   sub: { color: '#666', marginBottom: 24 },
   form: { display: 'flex', flexDirection: 'column', gap: 16 },
-  label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 600, flex: 1 },
-  input: { padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15, fontWeight: 400 },
-  calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14 },
-  calcRow: { display: 'flex', gap: 12 },
-  calcNote: { marginTop: 10, fontSize: 14, color: '#2a6b2a' },
+  label: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 14, fontWeight: 600, width: '100%' },
+  input: { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15, fontWeight: 400, boxSizing: 'border-box' },
+  calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 },
+  toggleRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
+  toggleBtn: {
+    flex: '1 1 auto',
+    padding: '8px 10px',
+    borderRadius: 8,
+    border: '1px solid #cfe8cf',
+    background: '#fff',
+    fontSize: 12.5,
+    fontWeight: 600,
+    color: '#2a6b2a',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+  toggleBtnActive: { background: '#1a7d3c', color: '#fff', borderColor: '#1a7d3c' },
+  calcNote: { fontSize: 14, color: '#2a6b2a', margin: 0 },
   error: { color: '#c0392b', fontSize: 14 },
   submitBtn: {
     padding: '14px 20px',

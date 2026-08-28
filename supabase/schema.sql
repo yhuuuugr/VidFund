@@ -55,3 +55,42 @@ group by c.id;
 
 create index on donations (campaign_id);
 create index on donations (paystack_reference);
+
+-- Row-level security policies
+-- There's no login system yet, so campaign creation and reading happens
+-- from the browser using the public anon key. These policies allow that,
+-- while donations/payouts stay locked to the service role key (used only
+-- in server-side API routes), so donor payment records can't be tampered
+-- with directly from the browser.
+
+alter table campaigns enable row level security;
+alter table donations enable row level security;
+alter table payouts enable row level security;
+
+-- Anyone can create a campaign (creator self-serve, no login yet)
+create policy "Public can create campaigns" on campaigns
+  for insert with check (true);
+
+-- Anyone can view campaigns (public fundraiser pages)
+create policy "Public can view campaigns" on campaigns
+  for select using (true);
+
+-- Donations/payouts are only readable publicly for the live progress bar;
+-- writes only happen server-side via the service role key, which bypasses
+-- RLS entirely, so no insert/update policy is needed for those.
+create policy "Public can view donations" on donations
+  for select using (true);
+
+create policy "Public can view payouts" on payouts
+  for select using (true);
+
+-- Storage: allow public upload + read for campaign videos
+insert into storage.buckets (id, name, public)
+values ('campaign-videos', 'campaign-videos', true)
+on conflict (id) do nothing;
+
+create policy "Public can upload campaign videos" on storage.objects
+  for insert with check (bucket_id = 'campaign-videos');
+
+create policy "Public can read campaign videos" on storage.objects
+  for select using (bucket_id = 'campaign-videos');
