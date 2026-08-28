@@ -94,3 +94,11 @@ create policy "Public can upload campaign videos" on storage.objects
 
 create policy "Public can read campaign videos" on storage.objects
   for select using (bucket_id = 'campaign-videos');
+
+-- Explicit grants: RLS policies alone aren't enough if the anon/authenticated
+-- roles were never given base table privileges. Without this, inserts fail
+-- with "permission denied for table X" before RLS is even evaluated.
+grant usage on schema public to anon, authenticated;
+grant select, insert on campaigns to anon, authenticated;
+grant select on donations to anon, authenticated;
+grant select on payouts to anon, authenticated;
