@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 
-export default function ShareSuccess() {
+function ShareSuccessInner() {
   const params = useSearchParams();
   const slug = params.get('slug');
   const [copied, setCopied] = useState(false);
@@ -54,6 +54,14 @@ export default function ShareSuccess() {
         </button>
       </div>
     </main>
+  );
+}
+
+export default function ShareSuccess() {
+  return (
+    <Suspense fallback={null}>
+      <ShareSuccessInner />
+    </Suspense>
   );
 }
 
