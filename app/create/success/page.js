@@ -1,14 +1,23 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 
 function ShareSuccessInner() {
   const params = useSearchParams();
   const slug = params.get('slug');
   const [copied, setCopied] = useState(false);
+  const [siteUrl, setSiteUrl] = useState(process.env.NEXT_PUBLIC_SITE_URL || '');
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+  // If the env var isn't set correctly, fall back to whatever domain the
+  // page is actually being viewed on — so the link is never just a bare
+  // path with no domain (which breaks sharing entirely).
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SITE_URL && typeof window !== 'undefined') {
+      setSiteUrl(window.location.origin);
+    }
+  }, []);
+
   const link = `${siteUrl}/${slug}`;
   const shareText = `I just started a fundraiser — please help support it:`;
 
