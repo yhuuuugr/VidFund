@@ -97,6 +97,19 @@ export default function MyFundraisers() {
     if (!error) loadData();
   }
 
+  async function togglePause(campaignId, currentStatus) {
+    const newStatus = currentStatus === 'paused' ? 'active' : 'paused';
+    const { error } = await supabase.from('campaigns').update({ status: newStatus }).eq('id', campaignId);
+    if (!error) loadData();
+  }
+
+  async function deleteCampaign(campaignId, title) {
+    const confirmed = confirm(`Delete "${title}" permanently? This can't be undone.`);
+    if (!confirmed) return;
+    const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
+    if (!error) loadData();
+  }
+
   function copyLink(slug) {
     const url = `${window.location.origin}/${slug}`;
     navigator.clipboard.writeText(url);
@@ -192,8 +205,14 @@ export default function MyFundraisers() {
         return (
           <div key={c.id} style={styles.card}>
             <div style={styles.cardHeader}>
-              <div style={styles.cardTitle}>{c.title}</div>
-              <div style={styles.viewCount}>👁 {c.view_count || 0} opens</div>
+              <div style={styles.cardTitle}>
+                {c.title}
+                {c.status === 'paused' && <span style={styles.pausedBadge}>Paused</span>}
+              </div>
+              <div style={styles.viewStats}>
+                <div style={styles.viewCount}>👁 {c.view_count || 0} opens</div>
+                <div style={styles.viewCount}>▶ {c.play_count || 0} plays</div>
+              </div>
             </div>
 
             <div style={styles.statsRow}>
@@ -254,6 +273,15 @@ export default function MyFundraisers() {
                 </>
               )}
             </div>
+
+            <div style={styles.manageRow}>
+              <button style={styles.pauseBtn} onClick={() => togglePause(c.id, c.status)}>
+                {c.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
+              </button>
+              <button style={styles.deleteBtn} onClick={() => deleteCampaign(c.id, c.title)}>
+                🗑 Delete
+              </button>
+            </div>
           </div>
         );
       })}
@@ -284,7 +312,12 @@ const styles = {
   },
   cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12, gap: 8 },
   cardTitle: { fontSize: 17, fontWeight: 700, color: '#111', flex: 1 },
-  viewCount: { fontSize: 12, color: '#888', fontWeight: 600, whiteSpace: 'nowrap' },
+  pausedBadge: {
+    display: 'inline-block', marginLeft: 8, fontSize: 10.5, fontWeight: 700, color: '#8a5a10',
+    background: '#fff4e0', borderRadius: 999, padding: '2px 8px', verticalAlign: 'middle',
+  },
+  viewStats: { display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end' },
+  viewCount: { fontSize: 11.5, color: '#888', fontWeight: 600, whiteSpace: 'nowrap' },
   statsRow: { display: 'flex', gap: 10, marginBottom: 12 },
   stat: { flex: 1, background: '#f4f9f4', borderRadius: 10, padding: '10px 12px' },
   statValue: { fontSize: 19, fontWeight: 700, color: '#0B3D2E' },
@@ -308,4 +341,13 @@ const styles = {
   commentNote: { fontSize: 13.5, color: '#333' },
   commentTime: { fontSize: 11.5, color: '#aaa', marginTop: 1 },
   showMoreBtn: { fontSize: 12.5, color: '#1a7d3c', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4 },
+  manageRow: { display: 'flex', gap: 8, marginTop: 14, borderTop: '1px solid #eee', paddingTop: 12 },
+  pauseBtn: {
+    flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #ddd', background: '#fafafa',
+    fontSize: 12.5, fontWeight: 700, color: '#555', cursor: 'pointer',
+  },
+  deleteBtn: {
+    flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #f5c6c0', background: '#fdf2f0',
+    fontSize: 12.5, fontWeight: 700, color: '#c0392b', cursor: 'pointer',
+  },
 };

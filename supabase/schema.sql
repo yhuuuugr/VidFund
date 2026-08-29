@@ -130,3 +130,23 @@ create policy "Creators can update their own campaigns" on campaigns
   with check (creator_email = auth.email());
 
 grant update on campaigns to authenticated;
+
+-- Video play tracking — separate from view_count, since page loads can be
+-- triggered by link-preview bots (WhatsApp, etc.) fetching the OG image,
+-- which inflates "opens" without a real person watching.
+alter table campaigns add column if not exists play_count integer not null default 0;
+
+create or replace function increment_campaign_play(campaign_slug text)
+returns void as $$
+  update campaigns set play_count = play_count + 1 where slug = campaign_slug;
+$$ language sql security definer;
+
+grant execute on function increment_campaign_play(text) to anon, authenticated;
+
+-- Let creators delete their own campaigns (pausing already works via the
+-- existing update policy, since "status" is just another column on a row
+-- they own).
+create policy "Creators can delete their own campaigns" on campaigns
+  for delete using (creator_email = auth.email());
+
+grant delete on campaigns to authenticated;

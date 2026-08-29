@@ -26,6 +26,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const targetUnits = campaign.target_units;
   const progressPct = Math.min(100, (unitsSoFar / targetUnits) * 100);
   const goalTotal = suggested * targetUnits;
+  const isPaused = campaign.status === 'paused';
 
   // Count this page load as a view — powers "X people opened your link" on
   // the creator dashboard. Fire-and-forget, once per mount.
@@ -97,9 +98,15 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       <main style={styles.page}>
         {/* Full-bleed video, no side margins — like YouTube's player */}
         {campaign.video_url ? (
-          <VideoPlayer src={campaign.video_url} />
+          <VideoPlayer src={campaign.video_url} slug={campaign.slug} />
         ) : (
           <div style={styles.videoFallback}>{campaign.title}</div>
+        )}
+
+        {isPaused && (
+          <div style={styles.pausedBanner}>
+            ⏸ This fundraiser is currently paused by its creator. New donations aren't being accepted right now.
+          </div>
         )}
 
         <div style={styles.content}>
@@ -126,6 +133,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         </div>
 
         {/* Sticky donate bar - stays visible while video plays */}
+        {!isPaused && (
         <div style={styles.stickyBar}>
           <div style={styles.stickyInner}>
             <div style={styles.amountRow}>
@@ -185,6 +193,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             </button>
           </div>
         </div>
+        )}
       </main>
     </>
   );
@@ -192,6 +201,10 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
 const styles = {
   page: { maxWidth: 480, margin: '0 auto', fontFamily: 'system-ui, sans-serif', paddingBottom: 180 },
+  pausedBanner: {
+    background: '#fff4e0', color: '#8a5a10', fontSize: 13.5, fontWeight: 600,
+    padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #f0d9a8',
+  },
   content: { padding: '16px' },
   videoFallback: {
     width: '100%', aspectRatio: '16/9', background: '#0B3D2E',
