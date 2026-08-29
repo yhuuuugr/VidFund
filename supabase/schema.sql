@@ -102,3 +102,8 @@ grant usage on schema public to anon, authenticated;
 grant select, insert on campaigns to anon, authenticated;
 grant select on donations to anon, authenticated;
 grant select on payouts to anon, authenticated;
+
+-- Views don't inherit table grants automatically in Postgres — without this,
+-- reading campaign_totals as the anon role fails even though campaigns and
+-- donations both have public select policies.
+grant select on campaign_totals to anon, authenticated;
