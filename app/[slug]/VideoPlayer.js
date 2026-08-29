@@ -17,6 +17,10 @@ export default function VideoPlayer({ src }) {
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(true);
+  // Detected from the video's real dimensions once metadata loads — lets
+  // the player adapt to portrait/selfie footage instead of force-cropping
+  // it into a fixed 16:9 box.
+  const [nativeAspect, setNativeAspect] = useState(null);
   const hideTimerRef = useRef(null);
 
   const scheduleHide = useCallback(() => {
@@ -75,8 +79,19 @@ export default function VideoPlayer({ src }) {
     scheduleHide();
   }
 
+  // Landscape (or square/near-square) plays full-bleed, matching the video's
+  // own ratio. Portrait/selfie footage is capped in height and shown whole
+  // (letterboxed) instead of being cropped by a fixed 16:9 box.
+  const isPortrait = nativeAspect !== null && nativeAspect < 0.95;
+  const wrapStyle = isPortrait
+    ? { ...styles.wrap, aspectRatio: 'auto', height: '70vh', background: '#000' }
+    : { ...styles.wrap, aspectRatio: nativeAspect ? String(nativeAspect) : '16/9' };
+  const videoStyle = isPortrait
+    ? { ...styles.video, objectFit: 'contain' }
+    : styles.video;
+
   return (
-    <div style={styles.wrap} onClick={handleTap}>
+    <div style={wrapStyle} onClick={handleTap}>
       <style>{`@keyframes vidfund-spin { to { transform: rotate(360deg); } }`}</style>
       <video
         ref={videoRef}
@@ -86,9 +101,13 @@ export default function VideoPlayer({ src }) {
         loop
         playsInline
         preload="auto"
-        style={styles.video}
+        style={videoStyle}
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
-        onLoadedMetadata={(e) => setDuration(e.target.duration)}
+        onLoadedMetadata={(e) => {
+          setDuration(e.target.duration);
+          const { videoWidth, videoHeight } = e.target;
+          if (videoWidth && videoHeight) setNativeAspect(videoWidth / videoHeight);
+        }}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}
