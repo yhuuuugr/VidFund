@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { nanoid } from 'nanoid';
@@ -79,10 +79,15 @@ export default function CreateCampaign() {
   const [creatorName, setCreatorName] = useState('');
   const [momoNumber, setMomoNumber] = useState('');
 
-  // Distinct stages so the person always knows what's happening —
-  // this replaces a single "Publishing..." state that gave no feedback.
-  const [stage, setStage] = useState('idle'); // idle | uploading | publishing
+  // Video uploads the instant it's selected, in the background, while the
+  // creator keeps filling out the rest of the form — instead of waiting
+  // until they tap Publish to even start.
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [videoStage, setVideoStage] = useState('idle'); // idle | uploading | done | error
   const [uploadProgress, setUploadProgress] = useState(0);
+  const uploadPromiseRef = useRef(null);
+
+  const [stage, setStage] = useState('idle'); // idle | waiting-for-video | publishing
   const [error, setError] = useState('');
 
   const suggested = Number(suggestedAmount) || 0;
@@ -101,13 +106,33 @@ export default function CreateCampaign() {
   function handleVideoChange(e) {
     const file = e.target.files?.[0] || null;
     setError('');
-    if (file && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+    if (!file) return;
+
+    if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
       setError(`That video is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Keep it under ${MAX_VIDEO_MB}MB — try a shorter clip.`);
       setVideoFile(null);
       e.target.value = '';
       return;
     }
+
     setVideoFile(file);
+    setVideoUrl(null);
+    setVideoStage('uploading');
+    setUploadProgress(0);
+
+    const promise = uploadVideoWithProgress(file, setUploadProgress)
+      .then((url) => {
+        setVideoUrl(url);
+        setVideoStage('done');
+        return url;
+      })
+      .catch((err) => {
+        setVideoStage('error');
+        setError(err.message || 'Video upload failed.');
+        throw err;
+      });
+
+    uploadPromiseRef.current = promise;
   }
 
   async function handleSubmit(e) {
@@ -115,12 +140,16 @@ export default function CreateCampaign() {
     setError('');
 
     try {
-      let videoUrl = null;
+      let finalVideoUrl = videoUrl;
 
-      if (videoFile) {
-        setStage('uploading');
-        setUploadProgress(0);
-        videoUrl = await uploadVideoWithProgress(videoFile, setUploadProgress);
+      // If a video was picked but hasn't finished uploading yet, wait for
+      // the upload already in progress rather than starting a new one.
+      if (videoFile && videoStage === 'uploading' && uploadPromiseRef.current) {
+        setStage('waiting-for-video');
+        finalVideoUrl = await uploadPromiseRef.current;
+      } else if (videoFile && videoStage === 'error') {
+        setError('The video failed to upload. Try reselecting it before publishing.');
+        return;
       }
 
       setStage('publishing');
@@ -133,7 +162,7 @@ export default function CreateCampaign() {
         title,
         story,
         category,
-        video_url: videoUrl,
+        video_url: finalVideoUrl,
         suggested_amount: suggested,
         target_units: targetUnits,
         creator_name: creatorName,
@@ -151,7 +180,7 @@ export default function CreateCampaign() {
 
   const submitting = stage !== 'idle';
   let buttonLabel = 'Publish fundraiser';
-  if (stage === 'uploading') buttonLabel = `Uploading video… ${uploadProgress}%`;
+  if (stage === 'waiting-for-video') buttonLabel = `Finishing video upload… ${uploadProgress}%`;
   if (stage === 'publishing') buttonLabel = 'Creating your page…';
 
   return (
@@ -210,21 +239,23 @@ export default function CreateCampaign() {
         {videoFile && (
           <div style={styles.videoCard}>
             <div style={styles.videoCardTop}>
-              <span style={styles.videoIcon}>🎥</span>
+              <span style={styles.videoIcon}>{videoStage === 'done' ? '✅' : videoStage === 'error' ? '⚠️' : '🎥'}</span>
               <div style={styles.videoInfo}>
                 <div style={styles.videoName}>{videoFile.name}</div>
                 <div style={styles.videoMeta}>{(videoFile.size / 1024 / 1024).toFixed(1)}MB</div>
               </div>
-              <span style={styles.videoStatusBadge(stage)}>
-                {stage === 'uploading' ? `${uploadProgress}%` : stage === 'publishing' || stage === 'idle' && videoFile ? 'Ready' : ''}
+              <span style={styles.videoStatusBadge(videoStage)}>
+                {videoStage === 'uploading' && `${uploadProgress}%`}
+                {videoStage === 'done' && 'Uploaded'}
+                {videoStage === 'error' && 'Failed'}
               </span>
             </div>
-            {stage === 'uploading' && (
+            {videoStage === 'uploading' && (
               <>
                 <div style={styles.progressBarBg}>
                   <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%` }} />
                 </div>
-                <div style={styles.uploadingLabel}>Uploading video… {uploadProgress}%</div>
+                <div style={styles.uploadingLabel}>Uploading in the background… {uploadProgress}%</div>
               </>
             )}
           </div>
@@ -359,13 +390,13 @@ const styles = {
   videoInfo: { flex: 1, minWidth: 0 },
   videoName: { fontSize: 13.5, fontWeight: 600, color: '#222', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
   videoMeta: { fontSize: 12, color: '#888', fontWeight: 400 },
-  videoStatusBadge: (stage) => ({
+  videoStatusBadge: (videoStage) => ({
     fontSize: 12,
     fontWeight: 700,
     padding: '4px 10px',
     borderRadius: 999,
-    background: stage === 'uploading' ? '#fff4e0' : '#e8f5ea',
-    color: stage === 'uploading' ? '#b5750a' : '#1a7d3c',
+    background: videoStage === 'uploading' ? '#fff4e0' : videoStage === 'error' ? '#fdecea' : '#e8f5ea',
+    color: videoStage === 'uploading' ? '#b5750a' : videoStage === 'error' ? '#c0392b' : '#1a7d3c',
     flexShrink: 0,
   }),
   uploadingLabel: { fontSize: 12.5, color: '#b5750a', fontWeight: 600 },
