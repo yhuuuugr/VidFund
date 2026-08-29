@@ -16,6 +16,7 @@ export default function VideoPlayer({ src }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(true);
   const hideTimerRef = useRef(null);
 
   const scheduleHide = useCallback(() => {
@@ -76,6 +77,7 @@ export default function VideoPlayer({ src }) {
 
   return (
     <div style={styles.wrap} onClick={handleTap}>
+      <style>{`@keyframes vidfund-spin { to { transform: rotate(360deg); } }`}</style>
       <video
         ref={videoRef}
         src={src}
@@ -83,12 +85,22 @@ export default function VideoPlayer({ src }) {
         muted
         loop
         playsInline
+        preload="auto"
         style={styles.video}
         onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.target.duration)}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
+        onCanPlay={() => setIsBuffering(false)}
       />
+
+      {isBuffering && (
+        <div style={styles.bufferingOverlay}>
+          <div style={styles.spinner} />
+        </div>
+      )}
 
       <div style={{ ...styles.controlsOverlay, opacity: showControls ? 1 : 0 }}>
         {/* Center controls: skip-back and play/pause */}
@@ -138,6 +150,23 @@ export default function VideoPlayer({ src }) {
 }
 
 const styles = {
+  bufferingOverlay: {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.15)',
+    pointerEvents: 'none',
+  },
+  spinner: {
+    width: 34,
+    height: 34,
+    borderRadius: '50%',
+    border: '3px solid rgba(255,255,255,0.35)',
+    borderTopColor: '#fff',
+    animation: 'vidfund-spin 0.8s linear infinite',
+  },
   wrap: {
     position: 'relative',
     width: '100%',
