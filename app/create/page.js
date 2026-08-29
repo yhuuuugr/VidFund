@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { nanoid } from 'nanoid';
@@ -29,6 +29,43 @@ function slugify(text) {
 
 export default function CreateCampaign() {
   const router = useRouter();
+
+  // Sign-in gate: creators authenticate with just their email (magic link,
+  // no password) before they can publish. Their email becomes the account
+  // identity; the "name" they type separately is specifically their MoMo
+  // account name, since that's what actually needs to match for payout.
+  const [session, setSession] = useState(undefined); // undefined = checking, null = signed out
+  const [authEmail, setAuthEmail] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, sess) => {
+      setSession(sess);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function handleSendMagicLink(e) {
+    e.preventDefault();
+    setAuthError('');
+    setAuthSubmitting(true);
+    try {
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: authEmail,
+        options: { emailRedirectTo: typeof window !== 'undefined' ? window.location.href : undefined },
+      });
+      if (otpError) throw otpError;
+      setOtpSent(true);
+    } catch (err) {
+      setAuthError(err.message || 'Could not send sign-in link. Try again.');
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
   const [title, setTitle] = useState('');
   const [story, setStory] = useState('');
   const [category, setCategory] = useState('emergency');
@@ -36,7 +73,7 @@ export default function CreateCampaign() {
   const [suggestedAmount, setSuggestedAmount] = useState(2);
   const [targetAmount, setTargetAmount] = useState(8000);
 
-  const [creatorName, setCreatorName] = useState('');
+  const [creatorName, setCreatorName] = useState(''); // this is now specifically their MoMo account name
   const [momoNumber, setMomoNumber] = useState('');
 
   // Video uploads the instant it's selected, in the background, using a
@@ -180,6 +217,7 @@ export default function CreateCampaign() {
         target_units: targetUnits,
         creator_name: creatorName,
         creator_momo_number: momoNumber,
+        creator_email: session?.user?.email || null,
       });
 
       if (insertError) throw insertError;
@@ -195,6 +233,52 @@ export default function CreateCampaign() {
   let buttonLabel = 'Publish fundraiser';
   if (stage === 'waiting-for-video') buttonLabel = `Finishing video upload… ${uploadProgress}%`;
   if (stage === 'publishing') buttonLabel = 'Creating your page…';
+
+  // Still checking for an existing session
+  if (session === undefined) {
+    return (
+      <main style={styles.page}>
+        <h1 style={styles.h1}>Start a fundraiser</h1>
+        <p style={styles.sub}>Loading…</p>
+      </main>
+    );
+  }
+
+  // Not signed in — show the email sign-in gate instead of the form
+  if (session === null) {
+    return (
+      <main style={styles.page}>
+        <h1 style={styles.h1}>Start a fundraiser</h1>
+        <p style={styles.sub}>Sign in with your email to get started — no password needed.</p>
+
+        {!otpSent ? (
+          <form onSubmit={handleSendMagicLink} style={styles.form}>
+            <label style={styles.label}>
+              Email
+              <input
+                style={styles.input}
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+            </label>
+            {authError && <p style={styles.error}>{authError}</p>}
+            <button style={styles.submitBtn} type="submit" disabled={authSubmitting}>
+              {authSubmitting ? 'Sending…' : 'Send me a sign-in link'}
+            </button>
+          </form>
+        ) : (
+          <div style={styles.calcBox}>
+            <p style={{ margin: 0, fontSize: 14, color: '#2a6b2a' }}>
+              Check <strong>{authEmail}</strong> for a sign-in link. Tap it on this device to continue.
+            </p>
+          </div>
+        )}
+      </main>
+    );
+  }
 
   return (
     <main style={styles.page}>
@@ -321,11 +405,12 @@ export default function CreateCampaign() {
         </div>
 
         <label style={styles.label}>
-          Your name
+          Name on your MoMo account
           <input
             style={styles.input}
             value={creatorName}
             onChange={(e) => setCreatorName(e.target.value)}
+            placeholder="Exactly as it appears on MoMo"
             required
           />
         </label>
@@ -342,6 +427,13 @@ export default function CreateCampaign() {
         </label>
 
         {error && <p style={styles.error}>{error}</p>}
+
+        <p style={styles.signedInAs}>
+          Signed in as {session.user.email} ·{' '}
+          <button type="button" style={styles.signOutLink} onClick={() => supabase.auth.signOut()}>
+            Sign out
+          </button>
+        </p>
 
         <button style={styles.submitBtn} type="submit" disabled={submitting}>
           {buttonLabel}
@@ -419,6 +511,8 @@ const styles = {
   peopleLabel: { fontSize: 13, color: '#3a6b4a', fontWeight: 600 },
   peopleValue: { fontSize: 18, color: '#1a7d3c', fontWeight: 700 },
   calcNote: { fontSize: 14, color: '#2a6b2a', margin: 0 },
+  signedInAs: { fontSize: 12.5, color: '#888', textAlign: 'center', margin: 0 },
+  signOutLink: { background: 'none', border: 'none', color: '#1a7d3c', fontWeight: 600, fontSize: 12.5, cursor: 'pointer', padding: 0, textDecoration: 'underline' },
   error: { color: '#c0392b', fontSize: 14 },
   submitBtn: {
     padding: '14px 20px',
