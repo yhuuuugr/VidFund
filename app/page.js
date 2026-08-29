@@ -82,29 +82,35 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Three steps — the whole process, nothing else */}
+        {/* Same 3 steps, told as one story instead of dry instructions */}
         <section className="how">
-          <div className="how-title">How VidFund works</div>
+          <div className="how-title">How it played out for Ama</div>
+          <p className="how-intro">Her shop flooded and she needed ₵800 to restock. Here's what she did.</p>
+
           <div className="how-item">
             <div className="how-emoji">🎥</div>
             <div>
-              <div className="how-step-title">Tell your story</div>
-              <div className="how-step-text">Record or upload a video explaining what you need.</div>
+              <div className="how-step-title">She recorded a 60-second video</div>
+              <div className="how-step-text">No script, no editing — just her explaining what happened, right from her phone.</div>
             </div>
           </div>
           <div className="how-item">
             <div className="how-emoji">🎯</div>
             <div>
-              <div className="how-step-title">Set your goal</div>
-              <div className="how-step-text">Choose how much you're trying to raise.</div>
+              <div className="how-step-title">She set a goal of ₵800</div>
+              <div className="how-step-text">Small and specific — exactly what she needed to reopen, nothing more.</div>
             </div>
           </div>
           <div className="how-item">
             <div className="how-emoji">🔗</div>
             <div>
-              <div className="how-step-title">Get your link</div>
-              <div className="how-step-text">Share it on WhatsApp, TikTok, Instagram, anywhere.</div>
+              <div className="how-step-title">She shared her link in a WhatsApp group</div>
+              <div className="how-step-text">Family, friends, and their friends — passed along from person to person.</div>
             </div>
+          </div>
+
+          <div className="how-outcome">
+            Within a week, 340 people had each given a little. <strong>Her shop reopened that Saturday.</strong>
           </div>
         </section>
 
@@ -208,7 +214,8 @@ const styles = `
   .quoteAuthor { font-size: 13px; color: #8a6a2a; font-weight: 600; margin: 0; }
 
   .how { padding: 30px 0 10px; }
-  .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 16px; }
+  .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 6px; }
+  .how-intro { font-size: 15px; color: #444; line-height: 1.5; margin: 0 0 20px; }
   .how-item { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 22px; }
   .how-emoji {
     width: 42px; height: 42px; border-radius: 12px; background: #f4f9f4;
@@ -216,6 +223,17 @@ const styles = `
   }
   .how-step-title { font-size: 15.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
   .how-step-text { font-size: 14px; color: #555; line-height: 1.45; }
+  .how-outcome {
+    background: linear-gradient(180deg, rgba(11,61,46,0.06), rgba(11,61,46,0.02));
+    border-left: 3px solid var(--green);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 14.5px;
+    color: #333;
+    line-height: 1.55;
+    margin-top: 6px;
+  }
+  .how-outcome strong { color: var(--green); }
 
   footer { padding: 20px 0 40px; text-align: center; }
   footer .foot-cta { display: block; width: 100%; box-sizing: border-box; background: var(--green); color: #fff; font-weight: 700; font-size: 16px; padding: 16px; border-radius: 12px; text-decoration: none; margin-bottom: 14px; transition: transform 0.1s; }
