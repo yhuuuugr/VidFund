@@ -209,7 +209,7 @@ export default function MyFundraisers() {
                 {c.title}
                 {c.status === 'paused' && <span style={styles.pausedBadge}>Paused</span>}
               </div>
-              <div style={styles.viewCount}>👁 {c.view_count || 0} views</div>
+              <div style={styles.viewCount}>{c.view_count || 0} views</div>
             </div>
 
             <div style={styles.statsRow}>
@@ -273,10 +273,10 @@ export default function MyFundraisers() {
 
             <div style={styles.manageRow}>
               <button style={styles.pauseBtn} onClick={() => togglePause(c.id, c.status)}>
-                {c.status === 'paused' ? '▶ Resume' : '⏸ Pause'}
+                {c.status === 'paused' ? 'Resume' : 'Pause'}
               </button>
               <button style={styles.deleteBtn} onClick={() => deleteCampaign(c.id, c.title)}>
-                🗑 Delete
+                Delete
               </button>
             </div>
           </div>
@@ -340,11 +340,11 @@ const styles = {
   showMoreBtn: { fontSize: 12.5, color: '#1a7d3c', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, marginTop: 4 },
   manageRow: { display: 'flex', gap: 8, marginTop: 14, borderTop: '1px solid #eee', paddingTop: 12 },
   pauseBtn: {
-    flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #ddd', background: '#fafafa',
-    fontSize: 12.5, fontWeight: 700, color: '#555', cursor: 'pointer',
+    flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: '#F2A93B',
+    fontSize: 12.5, fontWeight: 700, color: '#3a2a00', cursor: 'pointer',
   },
   deleteBtn: {
-    flex: 1, padding: '9px', borderRadius: 8, border: '1px solid #f5c6c0', background: '#fdf2f0',
-    fontSize: 12.5, fontWeight: 700, color: '#c0392b', cursor: 'pointer',
+    flex: 1, padding: '9px', borderRadius: 8, border: 'none', background: '#c0392b',
+    fontSize: 12.5, fontWeight: 700, color: '#fff', cursor: 'pointer',
   },
 };
