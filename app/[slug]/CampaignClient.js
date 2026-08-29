@@ -98,7 +98,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       <main style={styles.page}>
         {/* Full-bleed video, no side margins — like YouTube's player */}
         {campaign.video_url ? (
-          <VideoPlayer src={campaign.video_url} slug={campaign.slug} />
+          <VideoPlayer src={campaign.video_url} />
         ) : (
           <div style={styles.videoFallback}>{campaign.title}</div>
         )}

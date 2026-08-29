@@ -209,10 +209,7 @@ export default function MyFundraisers() {
                 {c.title}
                 {c.status === 'paused' && <span style={styles.pausedBadge}>Paused</span>}
               </div>
-              <div style={styles.viewStats}>
-                <div style={styles.viewCount}>👁 {c.view_count || 0} opens</div>
-                <div style={styles.viewCount}>▶ {c.play_count || 0} plays</div>
-              </div>
+              <div style={styles.viewCount}>👁 {c.view_count || 0} views</div>
             </div>
 
             <div style={styles.statsRow}>

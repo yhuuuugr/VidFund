@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 
 function formatTime(seconds) {
   if (!isFinite(seconds)) return '0:00';
@@ -10,7 +9,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function VideoPlayer({ src, slug }) {
+export default function VideoPlayer({ src }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
@@ -23,7 +22,6 @@ export default function VideoPlayer({ src, slug }) {
   // it into a fixed 16:9 box.
   const [nativeAspect, setNativeAspect] = useState(null);
   const hideTimerRef = useRef(null);
-  const hasCountedPlayRef = useRef(false); // only count once per page visit, not every loop
 
   const scheduleHide = useCallback(() => {
     clearTimeout(hideTimerRef.current);
@@ -110,13 +108,7 @@ export default function VideoPlayer({ src, slug }) {
           const { videoWidth, videoHeight } = e.target;
           if (videoWidth && videoHeight) setNativeAspect(videoWidth / videoHeight);
         }}
-        onPlay={() => {
-          setIsPlaying(true);
-          if (!hasCountedPlayRef.current && slug) {
-            hasCountedPlayRef.current = true;
-            supabase.rpc('increment_campaign_play', { campaign_slug: slug });
-          }
-        }}
+        onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
