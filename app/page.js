@@ -48,7 +48,7 @@ export default function Home() {
         {/* Hero: speaks directly to the person who needs help, not a generic donor pitch */}
         <section className="hero">
           <h1>Tell your story.<br /><span className="accent">Get support.</span></h1>
-          <p className="sub">Need help with something? Record your story and share it with people who care.</p>
+          <p className="sub">Need help with something? Record your story and share it with people who care. ❤️</p>
 
           <div className="cta-wrap">
             <Link href="/create" className="cta">🎥 Start your fundraiser</Link>
@@ -69,9 +69,17 @@ export default function Home() {
             <div className="tally-label">You don't need one person to give ₵8,000</div>
             <div className="coin-grid" ref={coinGridRef} />
             <div className="tally-sum">
-              <span>You can get ₵2 from 4,000 people</span>
+              <span>You can get ₵5 from 1,600 people</span>
               <span className="total" ref={totalRef}>= ₵0</span>
             </div>
+          </div>
+        </section>
+
+        <section className="quoteSection">
+          <div className="quoteCard">
+            <span className="quoteMark">"</span>
+            <p className="quoteText">No one has ever become poor by giving.</p>
+            <p className="quoteAuthor">— Anne Frank</p>
           </div>
         </section>
 
@@ -185,6 +193,12 @@ const styles = `
   @keyframes glint { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
   .tally-sum { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: rgba(255,255,255,0.9); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .tally-sum .total { font-size: 20px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  .quoteSection { padding: 26px 0 4px; }
+  .quoteCard { text-align: center; padding: 4px 10px; }
+  .quoteMark { font-family: 'Space Grotesk', sans-serif; font-size: 40px; color: var(--gold); line-height: 0.5; display: block; margin-bottom: 6px; }
+  .quoteText { font-size: 16px; font-style: italic; color: #333; line-height: 1.5; margin: 0 0 6px; }
+  .quoteAuthor { font-size: 12.5px; color: #999; font-weight: 600; margin: 0; }
 
   .how { padding: 30px 0 10px; }
   .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 16px; }
