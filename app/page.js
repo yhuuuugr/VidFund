@@ -48,6 +48,13 @@ export default function Home() {
         {/* Hero: speaks directly to the person who needs help, not a generic donor pitch */}
         <section className="hero">
           <h1>Tell your story.<br /><span className="accent">Get support.</span></h1>
+
+          <div className="quoteCard">
+            <span className="quoteMark">"</span>
+            <p className="quoteText">No one has ever become poor by giving.</p>
+            <p className="quoteAuthor">— Anne Frank</p>
+          </div>
+
           <p className="sub">Need help with something? Record your story and share it with people who care. ❤️</p>
 
           <div className="cta-wrap">
@@ -59,7 +66,7 @@ export default function Home() {
           <div className="recordCard">
             <div className="recordDot" />
             <div className="recordIcon">🎥</div>
-            <div className="recordCaption">Record your story right in the app</div>
+            <div className="recordCaption">Record right in the app, or upload your own video</div>
           </div>
         </section>
 
@@ -72,14 +79,6 @@ export default function Home() {
               <span>You can get ₵5 from 1,600 people</span>
               <span className="total" ref={totalRef}>= ₵0</span>
             </div>
-          </div>
-        </section>
-
-        <section className="quoteSection">
-          <div className="quoteCard">
-            <span className="quoteMark">"</span>
-            <p className="quoteText">No one has ever become poor by giving.</p>
-            <p className="quoteAuthor">— Anne Frank</p>
           </div>
         </section>
 
@@ -194,11 +193,19 @@ const styles = `
   .tally-sum { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: rgba(255,255,255,0.9); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .tally-sum .total { font-size: 20px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-  .quoteSection { padding: 26px 0 4px; }
-  .quoteCard { text-align: center; padding: 4px 10px; }
-  .quoteMark { font-family: 'Space Grotesk', sans-serif; font-size: 40px; color: var(--gold); line-height: 0.5; display: block; margin-bottom: 6px; }
-  .quoteText { font-size: 16px; font-style: italic; color: #333; line-height: 1.5; margin: 0 0 6px; }
-  .quoteAuthor { font-size: 12.5px; color: #999; font-weight: 600; margin: 0; }
+  .quoteCard {
+    text-align: center;
+    padding: 18px 14px 16px;
+    margin: 18px 0 20px;
+    background: linear-gradient(180deg, rgba(242,169,59,0.14), rgba(242,169,59,0.04));
+    border-radius: 16px;
+    border: 1px solid rgba(242,169,59,0.3);
+    opacity: 0;
+    animation: fadeUp 0.6s ease-out 0.2s forwards;
+  }
+  .quoteMark { font-family: 'Space Grotesk', sans-serif; font-size: 56px; color: var(--gold); line-height: 0.4; display: block; margin-bottom: 8px; }
+  .quoteText { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; font-style: italic; color: var(--green); line-height: 1.35; margin: 0 0 8px; }
+  .quoteAuthor { font-size: 13px; color: #8a6a2a; font-weight: 600; margin: 0; }
 
   .how { padding: 30px 0 10px; }
   .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 16px; }
