@@ -125,6 +125,7 @@ grant execute on function increment_campaign_view(text) to anon, authenticated;
 
 -- Only the signed-in creator who owns a campaign (matched by their auth
 -- email) can update it — e.g. to request a withdrawal.
+drop policy if exists "Creators can update their own campaigns" on campaigns;
 create policy "Creators can update their own campaigns" on campaigns
   for update using (creator_email = auth.email())
   with check (creator_email = auth.email());
@@ -146,6 +147,7 @@ grant execute on function increment_campaign_play(text) to anon, authenticated;
 -- Let creators delete their own campaigns (pausing already works via the
 -- existing update policy, since "status" is just another column on a row
 -- they own).
+drop policy if exists "Creators can delete their own campaigns" on campaigns;
 create policy "Creators can delete their own campaigns" on campaigns
   for delete using (creator_email = auth.email());
 
