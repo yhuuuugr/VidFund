@@ -107,3 +107,26 @@ grant select on payouts to anon, authenticated;
 -- reading campaign_totals as the anon role fails even though campaigns and
 -- donations both have public select policies.
 grant select on campaign_totals to anon, authenticated;
+
+-- Creator dashboard support: view counts, withdrawal requests
+
+alter table campaigns add column if not exists view_count integer not null default 0;
+alter table campaigns add column if not exists withdrawal_requested_at timestamptz;
+
+-- Safely increments view_count regardless of RLS (security definer), so
+-- anonymous visitors can bump the counter without needing write access to
+-- the whole campaigns row.
+create or replace function increment_campaign_view(campaign_slug text)
+returns void as $$
+  update campaigns set view_count = view_count + 1 where slug = campaign_slug;
+$$ language sql security definer;
+
+grant execute on function increment_campaign_view(text) to anon, authenticated;
+
+-- Only the signed-in creator who owns a campaign (matched by their auth
+-- email) can update it — e.g. to request a withdrawal.
+create policy "Creators can update their own campaigns" on campaigns
+  for update using (creator_email = auth.email())
+  with check (creator_email = auth.email());
+
+grant update on campaigns to authenticated;

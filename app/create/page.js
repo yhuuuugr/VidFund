@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
 import { nanoid } from 'nanoid';
 import * as tus from 'tus-js-client';
@@ -433,6 +434,7 @@ export default function CreateCampaign() {
           <button type="button" style={styles.signOutLink} onClick={() => supabase.auth.signOut()}>
             Sign out
           </button>
+          {' '}· <Link href="/my-fundraisers" style={styles.signOutLink}>My fundraisers</Link>
         </p>
 
         <button style={styles.submitBtn} type="submit" disabled={submitting}>

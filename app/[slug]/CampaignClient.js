@@ -27,6 +27,12 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const progressPct = Math.min(100, (unitsSoFar / targetUnits) * 100);
   const goalTotal = suggested * targetUnits;
 
+  // Count this page load as a view — powers "X people opened your link" on
+  // the creator dashboard. Fire-and-forget, once per mount.
+  useEffect(() => {
+    supabase.rpc('increment_campaign_view', { campaign_slug: campaign.slug });
+  }, [campaign.slug]);
+
   // Refresh totals every 15s so the progress bar feels live without a full backend push setup
   useEffect(() => {
     const interval = setInterval(async () => {

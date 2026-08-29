@@ -62,6 +62,10 @@ function ShareSuccessInner() {
           📸 Instagram (copy link, paste in story)
         </button>
       </div>
+
+      <a href="/my-fundraisers" style={styles.dashboardLink}>
+        View your dashboard →
+      </a>
     </main>
   );
 }
@@ -81,6 +85,7 @@ const styles = {
   copyBtn: { padding: '10px 18px', borderRadius: 8, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', marginBottom: 24 },
   shareLabel: { fontWeight: 700, marginBottom: 12 },
   shareGrid: { display: 'flex', flexDirection: 'column', gap: 10 },
+  dashboardLink: { display: 'block', marginTop: 20, fontSize: 14, color: '#1a7d3c', fontWeight: 700, textDecoration: 'none' },
   shareBtn: {
     padding: '14px',
     borderRadius: 10,
