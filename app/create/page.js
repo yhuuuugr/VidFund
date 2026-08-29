@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import TopNav from '../../components/TopNav';
 import { supabase } from '../../lib/supabaseClient';
 import { nanoid } from 'nanoid';
 import * as tus from 'tus-js-client';
@@ -238,16 +239,21 @@ export default function CreateCampaign() {
   // Still checking for an existing session
   if (session === undefined) {
     return (
+      <>
+      <TopNav />
       <main style={styles.page}>
         <h1 style={styles.h1}>Start a fundraiser</h1>
         <p style={styles.sub}>Loading…</p>
       </main>
+      </>
     );
   }
 
   // Not signed in — show the email sign-in gate instead of the form
   if (session === null) {
     return (
+      <>
+      <TopNav />
       <main style={styles.page}>
         <h1 style={styles.h1}>Start a fundraiser</h1>
         <p style={styles.sub}>Sign in with your email to get started — no password needed.</p>
@@ -278,10 +284,13 @@ export default function CreateCampaign() {
           </div>
         )}
       </main>
+      </>
     );
   }
 
   return (
+    <>
+    <TopNav />
     <main style={styles.page}>
       <h1 style={styles.h1}>Start a fundraiser</h1>
       <p style={styles.sub}>Small amounts from many people add up fast.</p>
@@ -442,6 +451,7 @@ export default function CreateCampaign() {
         </button>
       </form>
     </main>
+    </>
   );
 }
 

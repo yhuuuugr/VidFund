@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '../../lib/supabaseClient';
+import TopNav from '../../components/TopNav';
 
 function timeAgo(dateStr) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -103,59 +104,82 @@ export default function MyFundraisers() {
 
   // --- Auth gates ---
   if (session === undefined) {
-    return <main style={styles.page}><p style={styles.sub}>Loading…</p></main>;
+    return (
+      <>
+        <TopNav />
+        <main style={styles.page}><p style={styles.sub}>Loading…</p></main>
+      </>
+    );
   }
 
   if (session === null) {
     return (
-      <main style={styles.page}>
-        <h1 style={styles.h1}>Your fundraisers</h1>
-        <p style={styles.sub}>Sign in with your email to see your dashboard.</p>
+      <>
+        <TopNav />
+        <main style={styles.page}>
+          <h1 style={styles.h1}>Your fundraisers</h1>
+          <p style={styles.sub}>Sign in with your email to see your dashboard.</p>
 
-        {!otpSent ? (
-          <form onSubmit={handleSendMagicLink} style={styles.form}>
-            <input
-              style={styles.input}
-              type="email"
-              value={authEmail}
-              onChange={(e) => setAuthEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-            />
-            {authError && <p style={styles.error}>{authError}</p>}
-            <button style={styles.submitBtn} type="submit" disabled={authSubmitting}>
-              {authSubmitting ? 'Sending…' : 'Send me a sign-in link'}
-            </button>
-          </form>
-        ) : (
-          <div style={styles.calcBox}>
-            <p style={{ margin: 0, fontSize: 14, color: '#2a6b2a' }}>
-              Check <strong>{authEmail}</strong> for a sign-in link.
-            </p>
-          </div>
-        )}
-      </main>
+          {!otpSent ? (
+            <form onSubmit={handleSendMagicLink} style={styles.form}>
+              <input
+                style={styles.input}
+                type="email"
+                value={authEmail}
+                onChange={(e) => setAuthEmail(e.target.value)}
+                placeholder="you@example.com"
+                required
+              />
+              {authError && <p style={styles.error}>{authError}</p>}
+              <button style={styles.submitBtn} type="submit" disabled={authSubmitting}>
+                {authSubmitting ? 'Sending…' : 'Send me a sign-in link'}
+              </button>
+            </form>
+          ) : (
+            <div style={styles.calcBox}>
+              <p style={{ margin: 0, fontSize: 14, color: '#2a6b2a' }}>
+                Check <strong>{authEmail}</strong> for a sign-in link.
+              </p>
+            </div>
+          )}
+        </main>
+      </>
     );
   }
 
   if (loading) {
-    return <main style={styles.page}><p style={styles.sub}>Loading your fundraisers…</p></main>;
+    return (
+      <>
+        <TopNav />
+        <main style={styles.page}><p style={styles.sub}>Loading your fundraisers…</p></main>
+      </>
+    );
   }
 
   if (campaigns.length === 0) {
     return (
-      <main style={styles.page}>
-        <h1 style={styles.h1}>Your fundraisers</h1>
-        <p style={styles.sub}>You haven't started one yet.</p>
-        <Link href="/create" className="cta" style={styles.submitBtn}>Start a fundraiser</Link>
-      </main>
+      <>
+        <TopNav />
+        <main style={styles.page}>
+          <h1 style={styles.h1}>Your fundraisers</h1>
+          <p style={styles.sub}>You haven't started one yet.</p>
+          <Link href="/create" style={styles.submitBtn}>Start a fundraiser</Link>
+        </main>
+      </>
     );
   }
 
   return (
-    <main style={styles.page}>
-      <h1 style={styles.h1}>Your fundraisers</h1>
-      <p style={styles.sub}>Signed in as {session.user.email}</p>
+    <>
+      <TopNav />
+      <main style={styles.page}>
+        <div style={styles.headerRow}>
+          <div>
+            <h1 style={styles.h1}>Your fundraisers</h1>
+            <p style={styles.sub}>Signed in as {session.user.email}</p>
+          </div>
+          <Link href="/create" style={styles.newBtn}>+ New</Link>
+        </div>
 
       {campaigns.map((c) => {
         const raised = c.totals?.total_raised || 0;
@@ -233,12 +257,18 @@ export default function MyFundraisers() {
           </div>
         );
       })}
-    </main>
+      </main>
+    </>
   );
 }
 
 const styles = {
-  page: { maxWidth: 480, margin: '0 auto', padding: '24px 16px 60px', fontFamily: 'system-ui, sans-serif' },
+  page: { maxWidth: 480, margin: '0 auto', padding: '16px 16px 60px', fontFamily: 'system-ui, sans-serif' },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8, gap: 10 },
+  newBtn: {
+    background: '#1a7d3c', color: '#fff', fontSize: 13, fontWeight: 700, padding: '9px 14px',
+    borderRadius: 999, textDecoration: 'none', flexShrink: 0, whiteSpace: 'nowrap', marginTop: 2,
+  },
   h1: { fontSize: 24, marginBottom: 4 },
   sub: { color: '#666', marginBottom: 20, fontSize: 14 },
   form: { display: 'flex', flexDirection: 'column', gap: 12 },
