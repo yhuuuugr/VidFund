@@ -1,0 +1,217 @@
+'use client';
+
+import { useRef, useState, useEffect, useCallback } from 'react';
+
+function formatTime(seconds) {
+  if (!isFinite(seconds)) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export default function VideoPlayer({ src }) {
+  const videoRef = useRef(null);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [showControls, setShowControls] = useState(true);
+  const hideTimerRef = useRef(null);
+
+  const scheduleHide = useCallback(() => {
+    clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setShowControls(false), 2500);
+  }, []);
+
+  useEffect(() => {
+    scheduleHide();
+    return () => clearTimeout(hideTimerRef.current);
+  }, [scheduleHide]);
+
+  function togglePlay() {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play();
+      setIsPlaying(true);
+    } else {
+      v.pause();
+      setIsPlaying(false);
+    }
+    setShowControls(true);
+    scheduleHide();
+  }
+
+  function toggleMute() {
+    const v = videoRef.current;
+    if (!v) return;
+    v.muted = !v.muted;
+    setIsMuted(v.muted);
+    setShowControls(true);
+    scheduleHide();
+  }
+
+  function skipBack(e) {
+    e.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Math.max(0, v.currentTime - 5);
+    setShowControls(true);
+    scheduleHide();
+  }
+
+  function handleSeek(e) {
+    const v = videoRef.current;
+    if (!v || !duration) return;
+    v.currentTime = Number(e.target.value);
+    setCurrentTime(Number(e.target.value));
+    setShowControls(true);
+    scheduleHide();
+  }
+
+  function handleTap() {
+    setShowControls((prev) => !prev);
+    scheduleHide();
+  }
+
+  return (
+    <div style={styles.wrap} onClick={handleTap}>
+      <video
+        ref={videoRef}
+        src={src}
+        autoPlay
+        muted
+        loop
+        playsInline
+        style={styles.video}
+        onTimeUpdate={(e) => setCurrentTime(e.target.currentTime)}
+        onLoadedMetadata={(e) => setDuration(e.target.duration)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+
+      <div style={{ ...styles.controlsOverlay, opacity: showControls ? 1 : 0 }}>
+        {/* Center controls: skip-back and play/pause */}
+        <div style={styles.centerRow}>
+          <button style={styles.circleBtn} onClick={skipBack} aria-label="Back 5 seconds">
+            <span style={styles.skipIcon}>⟲</span>
+            <span style={styles.skipLabel}>5</span>
+          </button>
+          <button
+            style={styles.playBtn}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePlay();
+            }}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+          >
+            {isPlaying ? '❚❚' : '▶'}
+          </button>
+        </div>
+
+        {/* Bottom bar: seek, time, mute */}
+        <div style={styles.bottomBar} onClick={(e) => e.stopPropagation()}>
+          <span style={styles.timeText}>{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min="0"
+            max={duration || 0}
+            step="0.1"
+            value={currentTime}
+            onChange={handleSeek}
+            style={styles.seekBar}
+          />
+          <span style={styles.timeText}>{formatTime(duration)}</span>
+          <button style={styles.muteBtn} onClick={(e) => { e.stopPropagation(); toggleMute(); }} aria-label={isMuted ? 'Unmute' : 'Mute'}>
+            {isMuted ? '🔇' : '🔊'}
+          </button>
+        </div>
+      </div>
+
+      {isMuted && !showControls && (
+        <div style={styles.mutedHint} onClick={(e) => { e.stopPropagation(); toggleMute(); }}>
+          🔇 Tap to unmute
+        </div>
+      )}
+    </div>
+  );
+}
+
+const styles = {
+  wrap: {
+    position: 'relative',
+    width: '100%',
+    aspectRatio: '16/9',
+    background: '#000',
+    borderRadius: 14,
+    overflow: 'hidden',
+  },
+  video: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+  controlsOverlay: {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    background: 'linear-gradient(to bottom, rgba(0,0,0,0.25), transparent 30%, transparent 70%, rgba(0,0,0,0.45))',
+    transition: 'opacity 0.25s',
+    pointerEvents: 'auto',
+  },
+  centerRow: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 28,
+  },
+  circleBtn: {
+    background: 'rgba(0,0,0,0.4)',
+    border: 'none',
+    color: '#fff',
+    width: 42,
+    height: 42,
+    borderRadius: '50%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+    cursor: 'pointer',
+  },
+  skipIcon: { fontSize: 16 },
+  skipLabel: { fontSize: 9, marginTop: -2, fontWeight: 700 },
+  playBtn: {
+    background: 'rgba(0,0,0,0.4)',
+    border: 'none',
+    color: '#fff',
+    width: 54,
+    height: 54,
+    borderRadius: '50%',
+    fontSize: 18,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  bottomBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 10px',
+  },
+  timeText: { color: '#fff', fontSize: 11, fontFamily: 'monospace', minWidth: 32, textAlign: 'center' },
+  seekBar: { flex: 1, accentColor: '#F2A93B', height: 3, cursor: 'pointer' },
+  muteBtn: { background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', padding: 4 },
+  mutedHint: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    background: 'rgba(0,0,0,0.5)',
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 600,
+    padding: '5px 10px',
+    borderRadius: 999,
+    cursor: 'pointer',
+  },
+};

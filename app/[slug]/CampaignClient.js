@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Script from 'next/script';
 import { supabase } from '../../lib/supabaseClient';
+import VideoPlayer from './VideoPlayer';
 
 export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [totals, setTotals] = useState(initialTotals);
@@ -87,23 +88,14 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       />
 
       <main style={styles.page}>
-        {/* Video is the first thing shown, no scroll needed */}
-        <div style={styles.videoWrap}>
+        <div style={styles.content}>
+          {/* Video is contained and compact — no more eating most of the screen */}
           {campaign.video_url ? (
-            <video
-              src={campaign.video_url}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={styles.video}
-            />
+            <VideoPlayer src={campaign.video_url} />
           ) : (
             <div style={styles.videoFallback}>{campaign.title}</div>
           )}
-        </div>
 
-        <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
           <p style={styles.creator}>by {campaign.creator_name}</p>
 
@@ -185,14 +177,13 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
 const styles = {
   page: { maxWidth: 480, margin: '0 auto', fontFamily: 'system-ui, sans-serif', paddingBottom: 180 },
-  videoWrap: { width: '100%', aspectRatio: '9/16', background: '#000', maxHeight: '70vh' },
-  video: { width: '100%', height: '100%', objectFit: 'cover' },
-  videoFallback: {
-    width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-    color: '#fff', fontSize: 20, fontWeight: 700, textAlign: 'center', padding: 20,
-  },
   content: { padding: '16px' },
-  title: { fontSize: 22, marginBottom: 4 },
+  videoFallback: {
+    width: '100%', aspectRatio: '16/9', borderRadius: 14, background: '#0B3D2E',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    color: '#fff', fontSize: 18, fontWeight: 700, textAlign: 'center', padding: 20, boxSizing: 'border-box',
+  },
+  title: { fontSize: 22, marginTop: 16, marginBottom: 4 },
   creator: { color: '#666', fontSize: 14, marginBottom: 16 },
   progressBarBg: { background: '#eee', borderRadius: 999, height: 10, overflow: 'hidden' },
   progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.3s' },
