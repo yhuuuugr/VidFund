@@ -34,10 +34,7 @@ export default function CreateCampaign() {
   const [category, setCategory] = useState('emergency');
   const [videoFile, setVideoFile] = useState(null);
   const [suggestedAmount, setSuggestedAmount] = useState(2);
-
-  const [goalMode, setGoalMode] = useState('amount'); // 'amount' | 'people'
   const [targetAmount, setTargetAmount] = useState(8000);
-  const [targetPeople, setTargetPeople] = useState(4000);
 
   const [creatorName, setCreatorName] = useState('');
   const [momoNumber, setMomoNumber] = useState('');
@@ -56,17 +53,15 @@ export default function CreateCampaign() {
   const [error, setError] = useState('');
 
   const suggested = Number(suggestedAmount) || 0;
+  const target = Number(targetAmount) || 0;
 
+  // Number of people is always the calculated result — never a separate
+  // manual input — so it stays in sync automatically whenever either the
+  // suggested amount or the target amount changes.
   const derivedPeople = useMemo(() => {
-    if (goalMode === 'people') return Number(targetPeople) || 0;
     if (!suggested) return 0;
-    return Math.ceil((Number(targetAmount) || 0) / suggested);
-  }, [goalMode, targetPeople, targetAmount, suggested]);
-
-  const derivedTotal = useMemo(() => {
-    if (goalMode === 'amount') return Number(targetAmount) || 0;
-    return suggested * (Number(targetPeople) || 0);
-  }, [goalMode, targetAmount, targetPeople, suggested]);
+    return Math.ceil(target / suggested);
+  }, [target, suggested]);
 
   // Starts a fresh resumable upload for a newly-selected file. Returns the
   // promise handleSubmit can await if the upload is still running when the
@@ -303,55 +298,25 @@ export default function CreateCampaign() {
             />
           </label>
 
-          <div style={styles.toggleRow}>
-            <button
-              type="button"
-              onClick={() => setGoalMode('amount')}
-              style={{ ...styles.toggleBtn, ...(goalMode === 'amount' ? styles.toggleBtnActive : {}) }}
-            >
-              Set a target amount
-            </button>
-            <button
-              type="button"
-              onClick={() => setGoalMode('people')}
-              style={{ ...styles.toggleBtn, ...(goalMode === 'people' ? styles.toggleBtnActive : {}) }}
-            >
-              Set number of people
-            </button>
+          <label style={styles.label}>
+            Target amount (₵)
+            <input
+              style={styles.input}
+              type="number"
+              min="1"
+              value={targetAmount}
+              onChange={(e) => setTargetAmount(e.target.value)}
+              required
+            />
+          </label>
+
+          <div style={styles.peopleDisplay}>
+            <span style={styles.peopleLabel}>Number of people needed</span>
+            <span style={styles.peopleValue}>{derivedPeople.toLocaleString()}</span>
           </div>
 
-          {goalMode === 'amount' ? (
-            <label style={styles.label}>
-              Target amount (₵)
-              <input
-                style={styles.input}
-                type="number"
-                min="1"
-                value={targetAmount}
-                onChange={(e) => setTargetAmount(e.target.value)}
-                required
-              />
-            </label>
-          ) : (
-            <label style={styles.label}>
-              How many people
-              <input
-                style={styles.input}
-                type="number"
-                min="1"
-                value={targetPeople}
-                onChange={(e) => setTargetPeople(e.target.value)}
-                required
-              />
-            </label>
-          )}
-
           <p style={styles.calcNote}>
-            {goalMode === 'amount' ? (
-              <>Needs about <strong>{derivedPeople.toLocaleString()}</strong> people giving ₵{suggested.toFixed(2)} each to reach <strong>₵{derivedTotal.toLocaleString()}</strong></>
-            ) : (
-              <>Small money combines to be big: ₵{suggested.toFixed(2)} × {derivedPeople.toLocaleString()} people = <strong>₵{derivedTotal.toLocaleString()}</strong></>
-            )}
+            Needs about <strong>{derivedPeople.toLocaleString()}</strong> people giving ₵{suggested.toFixed(2)} each to reach <strong>₵{target.toLocaleString()}</strong>
           </p>
         </div>
 
@@ -442,20 +407,17 @@ const styles = {
   progressBarBg: { background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' },
   progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.2s' },
   calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 },
-  toggleRow: { display: 'flex', gap: 8, flexWrap: 'wrap' },
-  toggleBtn: {
-    flex: '1 1 auto',
-    padding: '8px 10px',
-    borderRadius: 8,
-    border: '1px solid #cfe8cf',
+  peopleDisplay: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     background: '#fff',
-    fontSize: 12.5,
-    fontWeight: 600,
-    color: '#2a6b2a',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
+    border: '1px solid #cfe8cf',
+    borderRadius: 8,
+    padding: '10px 14px',
   },
-  toggleBtnActive: { background: '#1a7d3c', color: '#fff', borderColor: '#1a7d3c' },
+  peopleLabel: { fontSize: 13, color: '#3a6b4a', fontWeight: 600 },
+  peopleValue: { fontSize: 18, color: '#1a7d3c', fontWeight: 700 },
   calcNote: { fontSize: 14, color: '#2a6b2a', margin: 0 },
   error: { color: '#c0392b', fontSize: 14 },
   submitBtn: {
