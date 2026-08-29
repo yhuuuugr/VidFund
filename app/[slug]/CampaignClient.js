@@ -10,8 +10,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [multiplier, setMultiplier] = useState(1);
   const [customAmount, setCustomAmount] = useState('');
   const [showCustom, setShowCustom] = useState(false);
-  const [donorName, setDonorName] = useState('');
-  const [showNameField, setShowNameField] = useState(false);
+  const [donorNote, setDonorNote] = useState('');
+  const [showNoteField, setShowNoteField] = useState(false);
   const [paystackReady, setPaystackReady] = useState(false);
 
   const suggested = Number(campaign.suggested_amount);
@@ -25,6 +25,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const unitsSoFar = totals?.total_units || 0;
   const targetUnits = campaign.target_units;
   const progressPct = Math.min(100, (unitsSoFar / targetUnits) * 100);
+  const goalTotal = suggested * targetUnits;
 
   // Refresh totals every 15s so the progress bar feels live without a full backend push setup
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       channels: ['mobile_money', 'card'],
       metadata: {
         campaign_id: campaign.id,
-        donor_name: donorName || 'Anonymous',
+        donor_name: donorNote || 'Anonymous',
       },
       callback: function (response) {
         // Confirm server-side via webhook/verify endpoint — never trust the client callback alone
@@ -69,7 +70,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             campaign_id: campaign.id,
             amount,
             units: amount / suggested,
-            donor_name: donorName || null,
+            donor_name: donorNote || null,
           }),
         }).then(() => {
           window.location.reload();
@@ -88,24 +89,32 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       />
 
       <main style={styles.page}>
-        <div style={styles.content}>
-          {/* Video is contained and compact — no more eating most of the screen */}
-          {campaign.video_url ? (
-            <VideoPlayer src={campaign.video_url} />
-          ) : (
-            <div style={styles.videoFallback}>{campaign.title}</div>
-          )}
+        {/* Full-bleed video, no side margins — like YouTube's player */}
+        {campaign.video_url ? (
+          <VideoPlayer src={campaign.video_url} />
+        ) : (
+          <div style={styles.videoFallback}>{campaign.title}</div>
+        )}
 
+        <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
           <p style={styles.creator}>by {campaign.creator_name}</p>
 
-          <div style={styles.progressBarBg}>
-            <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
+          <div style={styles.potCard}>
+            <div style={styles.jarOuter}>
+              <div style={styles.jarLid} />
+              <div style={styles.jarBody}>
+                <div style={{ ...styles.jarFill, height: `${progressPct}%` }} />
+              </div>
+            </div>
+            <div style={styles.potInfo}>
+              <div style={styles.potRaised}>₵{(totals?.total_raised || 0).toLocaleString()}</div>
+              <div style={styles.potGoal}>raised of ₵{goalTotal.toLocaleString()} goal</div>
+              <div style={styles.potSupporters}>
+                {Math.floor(unitsSoFar).toLocaleString()}/{targetUnits.toLocaleString()} supporters
+              </div>
+            </div>
           </div>
-          <p style={styles.progressText}>
-            ₵{(totals?.total_raised || 0).toLocaleString()} raised ·{' '}
-            {Math.floor(unitsSoFar).toLocaleString()}/{targetUnits.toLocaleString()} supporters
-          </p>
 
           <p style={styles.story}>{campaign.story}</p>
         </div>
@@ -151,16 +160,16 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               />
             )}
 
-            {!showNameField ? (
-              <button style={styles.nameToggle} onClick={() => setShowNameField(true)}>
-                + Add your name (optional)
+            {!showNoteField ? (
+              <button style={styles.nameToggle} onClick={() => setShowNoteField(true)}>
+                + Add a note (optional)
               </button>
             ) : (
               <input
                 type="text"
-                placeholder="Your name"
-                value={donorName}
-                onChange={(e) => setDonorName(e.target.value)}
+                placeholder="Say something nice (optional)"
+                value={donorNote}
+                onChange={(e) => setDonorNote(e.target.value)}
                 style={styles.customInput}
               />
             )}
@@ -179,15 +188,46 @@ const styles = {
   page: { maxWidth: 480, margin: '0 auto', fontFamily: 'system-ui, sans-serif', paddingBottom: 180 },
   content: { padding: '16px' },
   videoFallback: {
-    width: '100%', aspectRatio: '16/9', borderRadius: 14, background: '#0B3D2E',
+    width: '100%', aspectRatio: '16/9', background: '#0B3D2E',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color: '#fff', fontSize: 18, fontWeight: 700, textAlign: 'center', padding: 20, boxSizing: 'border-box',
   },
   title: { fontSize: 22, marginTop: 16, marginBottom: 4 },
   creator: { color: '#666', fontSize: 14, marginBottom: 16 },
-  progressBarBg: { background: '#eee', borderRadius: 999, height: 10, overflow: 'hidden' },
-  progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.3s' },
-  progressText: { fontSize: 14, color: '#333', marginTop: 8, fontWeight: 600 },
+  potCard: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    background: '#f4f9f4',
+    border: '1px solid #cfe8cf',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 4,
+  },
+  jarOuter: { width: 56, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' },
+  jarLid: { width: 26, height: 8, background: '#1a7d3c', borderRadius: '4px 4px 2px 2px' },
+  jarBody: {
+    width: 48,
+    height: 58,
+    border: '2.5px solid #1a7d3c',
+    borderTop: 'none',
+    borderRadius: '4px 4px 16px 16px',
+    position: 'relative',
+    overflow: 'hidden',
+    background: 'rgba(255,255,255,0.6)',
+  },
+  jarFill: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    background: 'linear-gradient(180deg, #F2A93B, #d9931f)',
+    transition: 'height 0.6s ease',
+  },
+  potInfo: { flex: 1 },
+  potRaised: { fontSize: 22, fontWeight: 700, color: '#0B3D2E', lineHeight: 1.1 },
+  potGoal: { fontSize: 13, color: '#3a6b4a', marginTop: 2 },
+  potSupporters: { fontSize: 12.5, color: '#5a8a6a', marginTop: 4, fontWeight: 600 },
   story: { marginTop: 20, lineHeight: 1.6, color: '#222', whiteSpace: 'pre-wrap' },
   stickyBar: {
     position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff',

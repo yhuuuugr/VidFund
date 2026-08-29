@@ -143,7 +143,7 @@ const styles = {
     width: '100%',
     aspectRatio: '16/9',
     background: '#000',
-    borderRadius: 14,
+    borderRadius: 0,
     overflow: 'hidden',
   },
   video: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
