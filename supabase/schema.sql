@@ -152,3 +152,21 @@ create policy "Creators can delete their own campaigns" on campaigns
   for delete using (creator_email = auth.email());
 
 grant delete on campaigns to authenticated;
+
+-- One MoMo profile per signed-in creator, so they only enter their payout
+-- details once — future campaigns pre-fill from here instead of asking again.
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  momo_name text,
+  momo_number text,
+  updated_at timestamptz not null default now()
+);
+
+alter table profiles enable row level security;
+
+drop policy if exists "Users manage their own profile" on profiles;
+create policy "Users manage their own profile" on profiles
+  for all using (auth.uid() = id)
+  with check (auth.uid() = id);
+
+grant select, insert, update on profiles to authenticated;

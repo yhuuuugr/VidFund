@@ -78,6 +78,23 @@ export default function CreateCampaign() {
   const [creatorName, setCreatorName] = useState(''); // this is now specifically their MoMo account name
   const [momoNumber, setMomoNumber] = useState('');
 
+  // Once signed in, pre-fill MoMo details from their saved profile (if
+  // they've published before) so they don't have to type it every time.
+  useEffect(() => {
+    if (!session) return;
+    supabase
+      .from('profiles')
+      .select('momo_name, momo_number')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          if (data.momo_name) setCreatorName(data.momo_name);
+          if (data.momo_number) setMomoNumber(data.momo_number);
+        }
+      });
+  }, [session]);
+
   // Video uploads the instant it's selected, in the background, using a
   // resumable (TUS) upload — so if it fails partway (dropped connection,
   // backgrounded app), tapping Retry continues from the last uploaded
@@ -223,6 +240,14 @@ export default function CreateCampaign() {
       });
 
       if (insertError) throw insertError;
+
+      // Save (or update) their MoMo details so future campaigns pre-fill automatically
+      await supabase.from('profiles').upsert({
+        id: session.user.id,
+        momo_name: creatorName,
+        momo_number: momoNumber,
+        updated_at: new Date().toISOString(),
+      });
 
       router.push(`/create/success?slug=${slug}`);
     } catch (err) {
