@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../../lib/supabaseClient';
 import { nanoid } from 'nanoid';
+import * as tus from 'tus-js-client';
 
 const CATEGORIES = [
   { id: 'emergency', label: 'Emergency', emoji: '❤️' },
@@ -26,44 +27,6 @@ function slugify(text) {
     .slice(0, 40);
 }
 
-// Uploads directly to Supabase Storage's REST endpoint (instead of the
-// supabase-js helper) so we get real upload progress events — the
-// supabase-js client doesn't expose progress, which is why publishing
-// looked frozen on slow mobile uploads with no feedback.
-function uploadVideoWithProgress(file, onProgress) {
-  return new Promise((resolve, reject) => {
-    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const fileName = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
-    const uploadUrl = `${projectUrl}/storage/v1/object/campaign-videos/${encodeURIComponent(fileName)}`;
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', uploadUrl);
-    xhr.setRequestHeader('apikey', anonKey);
-    xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
-    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-    xhr.timeout = 120000; // 2 minutes — fail loudly instead of hanging forever
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) {
-        onProgress(Math.round((e.loaded / e.total) * 100));
-      }
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${encodeURIComponent(fileName)}`;
-        resolve(publicUrl);
-      } else {
-        reject(new Error(`Video upload failed (${xhr.status}). Try a smaller file or check your connection.`));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Network error during video upload. Check your connection and try again.'));
-    xhr.ontimeout = () => reject(new Error('Video upload timed out. Try a shorter clip or a stronger connection.'));
-
-    xhr.send(file);
-  });
-}
-
 export default function CreateCampaign() {
   const router = useRouter();
   const [title, setTitle] = useState('');
@@ -79,13 +42,15 @@ export default function CreateCampaign() {
   const [creatorName, setCreatorName] = useState('');
   const [momoNumber, setMomoNumber] = useState('');
 
-  // Video uploads the instant it's selected, in the background, while the
-  // creator keeps filling out the rest of the form — instead of waiting
-  // until they tap Publish to even start.
+  // Video uploads the instant it's selected, in the background, using a
+  // resumable (TUS) upload — so if it fails partway (dropped connection,
+  // backgrounded app), tapping Retry continues from the last uploaded
+  // chunk instead of re-sending the whole file from zero.
   const [videoUrl, setVideoUrl] = useState(null);
   const [videoStage, setVideoStage] = useState('idle'); // idle | uploading | done | error
   const [uploadProgress, setUploadProgress] = useState(0);
-  const uploadPromiseRef = useRef(null);
+  const tusUploadRef = useRef(null); // the in-progress/resumable tus.Upload instance
+  const uploadCallbacksRef = useRef({ resolve: null, reject: null }); // rebindable per attempt
 
   const [stage, setStage] = useState('idle'); // idle | waiting-for-video | publishing
   const [error, setError] = useState('');
@@ -103,6 +68,58 @@ export default function CreateCampaign() {
     return suggested * (Number(targetPeople) || 0);
   }, [goalMode, targetAmount, targetPeople, suggested]);
 
+  // Starts a fresh resumable upload for a newly-selected file. Returns the
+  // promise handleSubmit can await if the upload is still running when the
+  // creator taps Publish.
+  function startUpload(file) {
+    const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const fileName = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
+
+    setVideoUrl(null);
+    setVideoStage('uploading');
+    setUploadProgress(0);
+
+    const promise = new Promise((resolve, reject) => {
+      uploadCallbacksRef.current = { resolve, reject };
+    });
+
+    const upload = new tus.Upload(file, {
+      endpoint: `${projectUrl}/storage/v1/upload/resumable`,
+      retryDelays: [0, 1000, 3000, 5000], // built-in auto-retry on transient blips
+      chunkSize: 6 * 1024 * 1024, // 6MB — Supabase's recommended chunk size for resumable uploads
+      headers: {
+        authorization: `Bearer ${anonKey}`,
+        apikey: anonKey,
+      },
+      metadata: {
+        bucketName: 'campaign-videos',
+        objectName: fileName,
+        contentType: file.type || 'application/octet-stream',
+        cacheControl: '3600',
+      },
+      onProgress: (bytesUploaded, bytesTotal) => {
+        setUploadProgress(Math.round((bytesUploaded / bytesTotal) * 100));
+      },
+      onSuccess: () => {
+        const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${encodeURIComponent(fileName)}`;
+        setVideoUrl(publicUrl);
+        setVideoStage('done');
+        uploadCallbacksRef.current.resolve(publicUrl);
+      },
+      onError: (err) => {
+        setVideoStage('error');
+        setError('Video upload failed. Tap Retry to continue from where it stopped.');
+        uploadCallbacksRef.current.reject(err);
+      },
+    });
+
+    tusUploadRef.current = upload;
+    upload.start();
+
+    return promise;
+  }
+
   function handleVideoChange(e) {
     const file = e.target.files?.[0] || null;
     setError('');
@@ -116,23 +133,24 @@ export default function CreateCampaign() {
     }
 
     setVideoFile(file);
-    setVideoUrl(null);
-    setVideoStage('uploading');
-    setUploadProgress(0);
+    startUpload(file);
+  }
 
-    const promise = uploadVideoWithProgress(file, setUploadProgress)
-      .then((url) => {
-        setVideoUrl(url);
-        setVideoStage('done');
-        return url;
-      })
-      .catch((err) => {
-        setVideoStage('error');
-        setError(err.message || 'Video upload failed.');
-        throw err;
+  function handleRetryUpload() {
+    setError('');
+    // If the same tus.Upload instance is still around, calling start() on
+    // it resumes from the last acknowledged byte (a HEAD request checks
+    // how much the server already has) rather than starting over.
+    if (tusUploadRef.current) {
+      setVideoStage('uploading');
+      const promise = new Promise((resolve, reject) => {
+        uploadCallbacksRef.current = { resolve, reject };
       });
-
-    uploadPromiseRef.current = promise;
+      tusUploadRef.current.start();
+      return promise;
+    } else if (videoFile) {
+      return startUpload(videoFile);
+    }
   }
 
   async function handleSubmit(e) {
@@ -142,13 +160,13 @@ export default function CreateCampaign() {
     try {
       let finalVideoUrl = videoUrl;
 
-      // If a video was picked but hasn't finished uploading yet, wait for
-      // the upload already in progress rather than starting a new one.
-      if (videoFile && videoStage === 'uploading' && uploadPromiseRef.current) {
+      if (videoFile && videoStage === 'uploading') {
         setStage('waiting-for-video');
-        finalVideoUrl = await uploadPromiseRef.current;
+        finalVideoUrl = await new Promise((resolve, reject) => {
+          uploadCallbacksRef.current = { resolve, reject };
+        });
       } else if (videoFile && videoStage === 'error') {
-        setError('The video failed to upload. Try reselecting it before publishing.');
+        setError('The video failed to upload. Tap Retry on the video before publishing.');
         return;
       }
 
@@ -244,11 +262,16 @@ export default function CreateCampaign() {
                 <div style={styles.videoName}>{videoFile.name}</div>
                 <div style={styles.videoMeta}>{(videoFile.size / 1024 / 1024).toFixed(1)}MB</div>
               </div>
-              <span style={styles.videoStatusBadge(videoStage)}>
-                {videoStage === 'uploading' && `${uploadProgress}%`}
-                {videoStage === 'done' && 'Uploaded'}
-                {videoStage === 'error' && 'Failed'}
-              </span>
+              {videoStage === 'error' ? (
+                <button type="button" style={styles.retryBtn} onClick={handleRetryUpload}>
+                  Retry
+                </button>
+              ) : (
+                <span style={styles.videoStatusBadge(videoStage)}>
+                  {videoStage === 'uploading' && `${uploadProgress}%`}
+                  {videoStage === 'done' && 'Uploaded'}
+                </span>
+              )}
             </div>
             {videoStage === 'uploading' && (
               <>
@@ -257,6 +280,11 @@ export default function CreateCampaign() {
                 </div>
                 <div style={styles.uploadingLabel}>Uploading in the background… {uploadProgress}%</div>
               </>
+            )}
+            {videoStage === 'error' && (
+              <div style={styles.progressBarBg}>
+                <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%`, background: '#c0392b' }} />
+              </div>
             )}
           </div>
         )}
@@ -400,6 +428,17 @@ const styles = {
     flexShrink: 0,
   }),
   uploadingLabel: { fontSize: 12.5, color: '#b5750a', fontWeight: 600 },
+  retryBtn: {
+    fontSize: 12.5,
+    fontWeight: 700,
+    padding: '6px 14px',
+    borderRadius: 999,
+    border: 'none',
+    background: '#c0392b',
+    color: '#fff',
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
   progressBarBg: { background: '#eee', borderRadius: 999, height: 8, overflow: 'hidden' },
   progressBarFill: { background: '#1a7d3c', height: '100%', transition: 'width 0.2s' },
   calcBox: { background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 14 },
