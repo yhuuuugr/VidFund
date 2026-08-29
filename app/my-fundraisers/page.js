@@ -26,6 +26,7 @@ export default function MyFundraisers() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({}); // campaignId -> bool, show full supporter list
+  const [copiedSlug, setCopiedSlug] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -113,6 +114,8 @@ export default function MyFundraisers() {
   function copyLink(slug) {
     const url = `${window.location.origin}/${slug}`;
     navigator.clipboard.writeText(url);
+    setCopiedSlug(slug);
+    setTimeout(() => setCopiedSlug((prev) => (prev === slug ? null : prev)), 2000);
   }
 
   // --- Auth gates ---
@@ -225,7 +228,9 @@ export default function MyFundraisers() {
 
             <div style={styles.linkRow}>
               <span style={styles.linkText}>vidfund.app/{c.slug}</span>
-              <button style={styles.copyBtn} onClick={() => copyLink(c.slug)}>Copy link</button>
+              <button style={styles.copyBtn} onClick={() => copyLink(c.slug)}>
+                {copiedSlug === c.slug ? 'Copied!' : 'Copy link'}
+              </button>
             </div>
 
             <div style={styles.withdrawBox}>
