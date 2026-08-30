@@ -160,7 +160,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   if (campaign.status === 'removed') {
     return (
       <main style={styles.removedPage}>
-        <h1 style={styles.removedTitle}>This fundraiser has been removed</h1>
+        <h1 style={styles.removedTitle}>This page has been removed</h1>
         <p style={styles.removedText}>
           It was reported and, after review, confirmed to violate VidFund's Terms of Service.
           Contributors have been refunded 50% of their donations.
@@ -185,12 +185,14 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         )}
 
         <p style={styles.videoCaption}>
-          {firstName} recorded this video to tell you what happened.
+          {isCreatorSupport
+            ? `${firstName} recorded this to share with you.`
+            : `${firstName} recorded this video to tell you what happened.`}
         </p>
 
         {isPaused && (
           <div style={styles.pausedBanner}>
-            This fundraiser is currently paused by its creator. New donations aren't being accepted right now.
+            This page is currently paused by its creator. New donations aren't being accepted right now.
           </div>
         )}
 
@@ -261,14 +263,14 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
           <div style={styles.reportWrap}>
             {!showReportForm ? (
               <button style={styles.reportLink} onClick={() => setShowReportForm(true)}>
-                Report this fundraiser
+                Report this page
               </button>
             ) : reportStatus === 'done' ? (
               <p style={styles.reportDone}>Thanks — we'll review this.</p>
             ) : (
               <form onSubmit={submitReport} style={styles.reportForm}>
                 <label style={styles.reportLabel}>
-                  Why are you reporting this fundraiser?
+                  Why are you reporting this page?
                   <textarea
                     style={styles.reportTextarea}
                     value={reportReason}
