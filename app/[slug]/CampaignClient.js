@@ -63,10 +63,14 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
   async function submitReport(e) {
     e.preventDefault();
+    if (reportReason.trim().length < 10) {
+      setReportStatus('too-short');
+      return;
+    }
     setReportStatus('submitting');
     const { error } = await supabase.from('reports').insert({
       campaign_id: campaign.id,
-      reason: reportReason,
+      reason: reportReason.trim(),
       reporter_contact: reportContact || null,
     });
     if (error) {
@@ -272,6 +276,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
                 />
                 {reportStatus === 'error' && (
                   <p style={styles.reportError}>Something went wrong. Try again.</p>
+                )}
+                {reportStatus === 'too-short' && (
+                  <p style={styles.reportError}>Please give a bit more detail so we can review this properly.</p>
                 )}
                 <button type="submit" style={styles.reportSubmitBtn} disabled={reportStatus === 'submitting'}>
                   {reportStatus === 'submitting' ? 'Submitting…' : 'Submit report'}
