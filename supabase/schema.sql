@@ -207,3 +207,8 @@ alter table donations add column if not exists refunded_amount numeric not null 
 
 alter table campaigns add column if not exists fraud_flagged boolean not null default false;
 alter table campaigns add column if not exists fraud_flagged_at timestamptz;
+
+-- Creator Support campaigns skip the story and target entirely (no fixed
+-- goal — it's ongoing fan support), so both need to become optional.
+alter table campaigns alter column story drop not null;
+alter table campaigns alter column target_units drop not null;

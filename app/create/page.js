@@ -318,8 +318,15 @@ export default function CreateCampaign() {
     <>
     <TopNav />
     <main style={styles.page}>
-      <h1 style={styles.h1}>Start a fundraiser</h1>
-      <p style={styles.sub}>Small amounts from many people add up fast.</p>
+      <div style={styles.headerRow}>
+        <div>
+          <h1 style={styles.h1}>Start a fundraiser</h1>
+          <p style={styles.sub}>Small amounts from many people add up fast.</p>
+        </div>
+        <Link href="/create/creator-support" style={styles.creatorLink}>
+          Creator support
+        </Link>
+      </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
         <label style={styles.label}>
@@ -487,6 +494,12 @@ export default function CreateCampaign() {
 
 const styles = {
   page: { maxWidth: 480, margin: '0 auto', padding: '24px 16px', fontFamily: 'system-ui, sans-serif' },
+  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, gap: 10 },
+  creatorLink: {
+    fontSize: 12.5, fontWeight: 700, color: '#0B3D2E', background: '#f4f9f4',
+    border: '1px solid #cfe8cf', borderRadius: 999, padding: '8px 14px',
+    textDecoration: 'none', whiteSpace: 'nowrap', flexShrink: 0, marginTop: 2,
+  },
   h1: { fontSize: 24, marginBottom: 4 },
   sub: { color: '#666', marginBottom: 24 },
   form: { display: 'flex', flexDirection: 'column', gap: 16 },

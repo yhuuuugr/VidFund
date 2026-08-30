@@ -43,9 +43,10 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   }, [showCustom, customAmount, selectedAmount, presetAmounts]);
 
   const unitsSoFar = totals?.total_units || 0;
-  const targetUnits = campaign.target_units;
-  const progressPct = Math.min(100, (unitsSoFar / targetUnits) * 100);
-  const goalTotal = suggested * targetUnits;
+  const targetUnits = campaign.target_units; // null for Creator Support — no fixed goal
+  const hasTarget = targetUnits != null && targetUnits > 0;
+  const progressPct = hasTarget ? Math.min(100, (unitsSoFar / targetUnits) * 100) : 0;
+  const goalTotal = hasTarget ? suggested * targetUnits : 0;
   const isPaused = campaign.status === 'paused';
 
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/${campaign.slug}` : '';
@@ -196,18 +197,24 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
 
-          <div style={styles.storyLabel}>{isCreatorSupport ? `About ${firstName}` : `${firstName}'s story`}</div>
-          <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
+          {campaign.story && (
+            <>
+              <div style={styles.storyLabel}>{isCreatorSupport ? `About ${firstName}` : `${firstName}'s story`}</div>
+              <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
+            </>
+          )}
 
           {/* Progress — the number matters more than decoration here */}
           <div style={styles.progressBlock}>
             <div style={styles.raisedRow}>
               <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
-              <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>
+              {hasTarget && <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>}
             </div>
-            <div style={styles.progressBarBg}>
-              <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
-            </div>
+            {hasTarget && (
+              <div style={styles.progressBarBg}>
+                <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
+              </div>
+            )}
             <div style={styles.helpedLine}>
               {Math.floor(unitsSoFar).toLocaleString()} {isCreatorSupport ? `fans are supporting ${firstName}` : `people have helped ${firstName}`}
             </div>

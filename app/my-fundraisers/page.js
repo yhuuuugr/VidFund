@@ -201,7 +201,7 @@ export default function MyFundraisers() {
         const raised = c.totals?.total_raised || 0;
         const supporters = Math.floor(c.totals?.total_units || 0);
         const unpaid = Number(c.totals?.unpaid_balance || 0);
-        const goal = Number(c.suggested_amount) * c.target_units;
+        const goal = c.target_units != null ? Number(c.suggested_amount) * c.target_units : null;
         const isExpanded = expanded[c.id];
         const visibleDonations = isExpanded ? c.donations : c.donations.slice(0, 3);
 
@@ -218,7 +218,7 @@ export default function MyFundraisers() {
             <div style={styles.statsRow}>
               <div style={styles.stat}>
                 <div style={styles.statValue}>₵{raised.toLocaleString()}</div>
-                <div style={styles.statLabel}>raised of ₵{goal.toLocaleString()}</div>
+                <div style={styles.statLabel}>{goal != null ? `raised of ₵${goal.toLocaleString()}` : 'raised'}</div>
               </div>
               <div style={styles.stat}>
                 <div style={styles.statValue}>{supporters.toLocaleString()}</div>
