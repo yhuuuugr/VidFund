@@ -59,6 +59,25 @@ export default function Terms() {
         payout to the creator.
       </p>
 
+      <h2 style={styles.h2}>4a. Reporting a fundraiser</h2>
+      <p style={styles.p}>
+        Any visitor can report a fundraiser they believe is fake, fraudulent, or misleading,
+        directly from the campaign page. VidFund reviews reports manually. If a campaign is
+        confirmed to be fraudulent following review:
+      </p>
+      <ul style={styles.ul}>
+        <li>The campaign page is permanently removed and can no longer accept donations.</li>
+        <li>The creator forfeits any right to funds already raised — no payout will be made.</li>
+        <li>Each contributor to that campaign will be refunded 50% of the amount they donated, processed back to their original payment method.</li>
+      </ul>
+      <p style={styles.p}>
+        The remaining 50% is not refunded because payment processing fees are non-recoverable
+        once a transaction has settled, and reviewing and reversing fraudulent campaigns
+        carries a cost. This policy is designed to meaningfully compensate donors while
+        remaining operationally sustainable. Decisions on reported campaigns are made at
+        VidFund's discretion following manual review, and are final.
+      </p>
+
       <h2 style={styles.h2}>5. Fees</h2>
       <p style={styles.p}>
         VidFund deducts a platform fee (currently 5%) from each donation before payout to the

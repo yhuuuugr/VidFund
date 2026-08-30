@@ -25,6 +25,10 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [paystackReady, setPaystackReady] = useState(false);
   const [recentDonations, setRecentDonations] = useState([]);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportContact, setReportContact] = useState('');
+  const [reportStatus, setReportStatus] = useState('idle'); // idle | submitting | done | error
 
   const suggested = Number(campaign.suggested_amount);
   // Plain preset amounts — not "1x/2x/3x" multipliers, which read as
@@ -55,6 +59,21 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
     navigator.clipboard.writeText(shareUrl);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 2000);
+  }
+
+  async function submitReport(e) {
+    e.preventDefault();
+    setReportStatus('submitting');
+    const { error } = await supabase.from('reports').insert({
+      campaign_id: campaign.id,
+      reason: reportReason,
+      reporter_contact: reportContact || null,
+    });
+    if (error) {
+      setReportStatus('error');
+    } else {
+      setReportStatus('done');
+    }
   }
 
   // Count this page load as a view — powers the creator dashboard.
@@ -129,6 +148,19 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       onClose: function () {},
     });
     handler.openIframe();
+  }
+
+  // Confirmed fraudulent — fully block the page rather than just hiding the donate button
+  if (campaign.status === 'removed') {
+    return (
+      <main style={styles.removedPage}>
+        <h1 style={styles.removedTitle}>This fundraiser has been removed</h1>
+        <p style={styles.removedText}>
+          It was reported and, after review, confirmed to violate VidFund's Terms of Service.
+          Contributors have been refunded 50% of their donations.
+        </p>
+      </main>
+    );
   }
 
   return (
@@ -211,6 +243,42 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               ))}
             </div>
           )}
+
+          <div style={styles.reportWrap}>
+            {!showReportForm ? (
+              <button style={styles.reportLink} onClick={() => setShowReportForm(true)}>
+                Report this fundraiser
+              </button>
+            ) : reportStatus === 'done' ? (
+              <p style={styles.reportDone}>Thanks — we'll review this.</p>
+            ) : (
+              <form onSubmit={submitReport} style={styles.reportForm}>
+                <label style={styles.reportLabel}>
+                  Why are you reporting this fundraiser?
+                  <textarea
+                    style={styles.reportTextarea}
+                    value={reportReason}
+                    onChange={(e) => setReportReason(e.target.value)}
+                    placeholder="Explain what seems wrong or suspicious"
+                    required
+                  />
+                </label>
+                <input
+                  style={styles.reportInput}
+                  type="text"
+                  value={reportContact}
+                  onChange={(e) => setReportContact(e.target.value)}
+                  placeholder="Your email or phone (optional, for follow-up)"
+                />
+                {reportStatus === 'error' && (
+                  <p style={styles.reportError}>Something went wrong. Try again.</p>
+                )}
+                <button type="submit" style={styles.reportSubmitBtn} disabled={reportStatus === 'submitting'}>
+                  {reportStatus === 'submitting' ? 'Submitting…' : 'Submit report'}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
 
         {/* Sticky donate bar - stays visible while video plays */}
@@ -336,6 +404,21 @@ const styles = {
   recentName: { fontSize: 13.5, color: '#333', fontWeight: 600, flex: 1 },
   recentAmount: { fontSize: 13.5, color: '#0B3D2E', fontWeight: 700 },
   recentTime: { fontSize: 11.5, color: '#aaa', marginLeft: 6, whiteSpace: 'nowrap' },
+  reportWrap: { marginTop: 24, paddingTop: 14, borderTop: '1px solid #f0f0f0' },
+  reportLink: { background: 'none', border: 'none', color: '#aaa', fontSize: 12.5, textDecoration: 'underline', cursor: 'pointer', padding: 0 },
+  reportDone: { fontSize: 13, color: '#2a6b2a' },
+  reportForm: { display: 'flex', flexDirection: 'column', gap: 10 },
+  reportLabel: { display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13, fontWeight: 600, color: '#555' },
+  reportTextarea: { padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14, minHeight: 70, fontFamily: 'inherit', boxSizing: 'border-box' },
+  reportInput: { padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14, boxSizing: 'border-box' },
+  reportError: { fontSize: 13, color: '#c0392b', margin: 0 },
+  reportSubmitBtn: { padding: '10px', borderRadius: 8, border: 'none', background: '#555', color: '#fff', fontSize: 13.5, fontWeight: 700, cursor: 'pointer' },
+  removedPage: {
+    maxWidth: 480, margin: '0 auto', padding: '60px 24px', fontFamily: 'system-ui, sans-serif',
+    textAlign: 'center', minHeight: '100vh', boxSizing: 'border-box',
+  },
+  removedTitle: { fontSize: 22, color: '#1A1A1A', marginBottom: 12 },
+  removedText: { fontSize: 15, color: '#666', lineHeight: 1.6 },
   stickyBar: {
     position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFFBF2',
     borderTop: '1px solid #e5ddc8', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',

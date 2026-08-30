@@ -170,3 +170,40 @@ create policy "Users manage their own profile" on profiles
   with check (auth.uid() = id);
 
 grant select, insert, update on profiles to authenticated;
+
+-- Reporting & fraud handling
+
+create table if not exists reports (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  reason text not null,
+  reporter_contact text,
+  status text not null default 'pending', -- pending | dismissed | confirmed_fraud
+  created_at timestamptz not null default now(),
+  reviewed_at timestamptz
+);
+
+alter table reports enable row level security;
+
+-- Anyone can file a report, no login required
+drop policy if exists "Public can create reports" on reports;
+create policy "Public can create reports" on reports
+  for insert with check (true);
+
+-- Only the admin account can read/review reports
+drop policy if exists "Admin can view reports" on reports;
+create policy "Admin can view reports" on reports
+  for select using (auth.email() = 'edwinafriyie16@gmail.com');
+
+drop policy if exists "Admin can update reports" on reports;
+create policy "Admin can update reports" on reports
+  for update using (auth.email() = 'edwinafriyie16@gmail.com');
+
+grant select, insert, update on reports to anon, authenticated;
+
+-- Track refunds per donation, and whether a campaign was removed for fraud
+alter table donations add column if not exists refund_status text not null default 'none'; -- none | refunded
+alter table donations add column if not exists refunded_amount numeric not null default 0;
+
+alter table campaigns add column if not exists fraud_flagged boolean not null default false;
+alter table campaigns add column if not exists fraud_flagged_at timestamptz;

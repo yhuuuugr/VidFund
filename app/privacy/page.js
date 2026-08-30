@@ -31,6 +31,16 @@ export default function Privacy() {
         <li>Payment details are handled directly by Paystack, our payment processor — VidFund does not see or store your card or mobile money PIN.</li>
       </ul>
 
+      <p style={styles.p}><strong>When you report a fundraiser:</strong></p>
+      <ul style={styles.ul}>
+        <li>The reason you provide for the report.</li>
+        <li>An optional contact (email or phone) if you choose to leave one, so we can follow up.</li>
+      </ul>
+      <p style={styles.p}>
+        Reports are visible only to VidFund's admin for review, never to the public or to the
+        reported campaign's creator.
+      </p>
+
       <h2 style={styles.h2}>2. How we use this information</h2>
       <p style={styles.p}>We use the information above to:</p>
       <ul style={styles.ul}>
