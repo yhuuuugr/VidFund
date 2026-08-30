@@ -179,7 +179,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       <main style={styles.page}>
         {/* The video is the whole point — it dominates the page */}
         {campaign.video_url ? (
-          <VideoPlayer src={campaign.video_url} />
+          <VideoPlayer src={campaign.video_url} portraitHeight={isCreatorSupport ? '62vh' : '48vh'} />
         ) : (
           <div style={styles.videoFallback}>{campaign.title}</div>
         )}
@@ -229,21 +229,28 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             {!isCreatorSupport && (
               <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
             )}
-            <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
-              {isCreatorSupport ? 'Share' : 'Share on WhatsApp'}
-            </a>
             {isCreatorSupport ? (
-              <button onClick={copyShareLink} style={{ ...styles.shareSmallBtn, width: '100%', marginTop: 8 }}>
-                {linkCopied ? 'Copied!' : 'Copy link'}
-              </button>
-            ) : (
               <div style={styles.shareRow}>
-                <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
-                <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
+                <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={{ ...styles.whatsappBtn, flex: 1, marginBottom: 0 }}>
+                  Share
+                </a>
                 <button onClick={copyShareLink} style={styles.shareSmallBtn}>
                   {linkCopied ? 'Copied!' : 'Copy link'}
                 </button>
               </div>
+            ) : (
+              <>
+                <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
+                  Share on WhatsApp
+                </a>
+                <div style={styles.shareRow}>
+                  <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
+                  <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
+                  <button onClick={copyShareLink} style={styles.shareSmallBtn}>
+                    {linkCopied ? 'Copied!' : 'Copy link'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
 

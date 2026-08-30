@@ -9,7 +9,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function VideoPlayer({ src }) {
+export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
@@ -84,7 +84,7 @@ export default function VideoPlayer({ src }) {
   // (letterboxed) instead of being cropped by a fixed 16:9 box.
   const isPortrait = nativeAspect !== null && nativeAspect < 0.95;
   const wrapStyle = isPortrait
-    ? { ...styles.wrap, aspectRatio: 'auto', height: '48vh', background: '#000' }
+    ? { ...styles.wrap, aspectRatio: 'auto', height: portraitHeight, background: '#000' }
     : { ...styles.wrap, aspectRatio: nativeAspect ? String(nativeAspect) : '16/9' };
   const videoStyle = isPortrait
     ? { ...styles.video, objectFit: 'contain' }
