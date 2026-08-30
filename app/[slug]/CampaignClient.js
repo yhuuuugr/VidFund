@@ -7,7 +7,7 @@ import VideoPlayer from './VideoPlayer';
 
 export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [totals, setTotals] = useState(initialTotals);
-  const [multiplier, setMultiplier] = useState(1);
+  const [selectedAmount, setSelectedAmount] = useState(null); // null until first pick
   const [customAmount, setCustomAmount] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   const [donorNote, setDonorNote] = useState('');
@@ -15,12 +15,15 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [paystackReady, setPaystackReady] = useState(false);
 
   const suggested = Number(campaign.suggested_amount);
-  const multiplierOptions = [1, 2, 3, 5];
+  // Plain preset amounts — not "1x/2x/3x" multipliers, which read as
+  // quantities/products rather than donation amounts.
+  const presetAmounts = [1, 2, 3, 5].map((m) => suggested * m);
+  const firstName = (campaign.creator_name || 'them').trim().split(' ')[0];
 
   const amount = useMemo(() => {
     if (showCustom) return Number(customAmount) || 0;
-    return suggested * multiplier;
-  }, [showCustom, customAmount, multiplier, suggested]);
+    return selectedAmount ?? presetAmounts[0];
+  }, [showCustom, customAmount, selectedAmount, presetAmounts]);
 
   const unitsSoFar = totals?.total_units || 0;
   const targetUnits = campaign.target_units;
@@ -28,8 +31,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const goalTotal = suggested * targetUnits;
   const isPaused = campaign.status === 'paused';
 
-  // Count this page load as a view — powers "X people opened your link" on
-  // the creator dashboard. Fire-and-forget, once per mount.
+  // Count this page load as a view — powers the creator dashboard.
   useEffect(() => {
     supabase.rpc('increment_campaign_view', { campaign_slug: campaign.slug });
   }, [campaign.slug]);
@@ -68,7 +70,6 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         donor_name: donorNote || 'Anonymous',
       },
       callback: function (response) {
-        // Confirm server-side via webhook/verify endpoint — never trust the client callback alone
         fetch('/api/donate/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -96,67 +97,71 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       />
 
       <main style={styles.page}>
-        {/* Full-bleed video, no side margins — like YouTube's player */}
+        {/* The video is the whole point — it dominates the page */}
         {campaign.video_url ? (
           <VideoPlayer src={campaign.video_url} />
         ) : (
           <div style={styles.videoFallback}>{campaign.title}</div>
         )}
 
+        <p style={styles.videoCaption}>
+          {firstName} recorded this video to tell you what happened.
+        </p>
+
         {isPaused && (
           <div style={styles.pausedBanner}>
-            ⏸ This fundraiser is currently paused by its creator. New donations aren't being accepted right now.
+            This fundraiser is currently paused by its creator. New donations aren't being accepted right now.
           </div>
         )}
 
         <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
-          <p style={styles.creator}>by {campaign.creator_name}</p>
 
-          <div style={styles.potCard}>
-            <div style={styles.jarOuter}>
-              <div style={styles.jarLid} />
-              <div style={styles.jarBody}>
-                <div style={{ ...styles.jarFill, height: `${progressPct}%` }} />
-              </div>
+          <div style={styles.storyLabel}>{firstName}'s story</div>
+          <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
+
+          {/* Progress — the number matters more than decoration here */}
+          <div style={styles.progressBlock}>
+            <div style={styles.raisedRow}>
+              <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
+              <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>
             </div>
-            <div style={styles.potInfo}>
-              <div style={styles.potRaised}>₵{(totals?.total_raised || 0).toLocaleString()}</div>
-              <div style={styles.potGoal}>raised of ₵{goalTotal.toLocaleString()} goal</div>
-              <div style={styles.potSupporters}>
-                {Math.floor(unitsSoFar).toLocaleString()}/{targetUnits.toLocaleString()} supporters
-              </div>
+            <div style={styles.progressBarBg}>
+              <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
+            </div>
+            <div style={styles.helpedLine}>
+              {Math.floor(unitsSoFar).toLocaleString()} people have helped {firstName}
             </div>
           </div>
-
-          <p style={styles.story}>{campaign.story}</p>
         </div>
 
         {/* Sticky donate bar - stays visible while video plays */}
         {!isPaused && (
         <div style={styles.stickyBar}>
           <div style={styles.stickyInner}>
+            <div style={styles.askLine}>Would you like to help?</div>
+
             <div style={styles.amountRow}>
-              {multiplierOptions.map((m) => (
+              {presetAmounts.map((amt) => (
                 <button
-                  key={m}
+                  key={amt}
                   onClick={() => {
-                    setMultiplier(m);
+                    setSelectedAmount(amt);
                     setShowCustom(false);
                   }}
                   style={{
-                    ...styles.multBtn,
-                    ...(multiplier === m && !showCustom ? styles.multBtnActive : {}),
+                    ...styles.amountBtn,
+                    ...(!showCustom && amount === amt ? styles.amountBtnActive : {}),
                   }}
                 >
-                  {m}× ₵{(suggested * m).toFixed(0)}
+                  ₵{amt.toFixed(0)}
                 </button>
               ))}
               <button
                 onClick={() => setShowCustom(true)}
                 style={{
-                  ...styles.multBtn,
-                  ...(showCustom ? styles.multBtnActive : {}),
+                  ...styles.amountBtn,
+                  ...(showCustom ? styles.amountBtnActive : {}),
                 }}
               >
                 Custom
@@ -175,7 +180,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             )}
 
             {!showNoteField ? (
-              <button style={styles.nameToggle} onClick={() => setShowNoteField(true)}>
+              <button style={styles.noteToggle} onClick={() => setShowNoteField(true)}>
                 + Add a note (optional)
               </button>
             ) : (
@@ -189,7 +194,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             )}
 
             <button style={styles.donateBtn} onClick={startPayment}>
-              Support with ₵{amount.toFixed(2)}
+              Support {firstName} with ₵{amount.toFixed(0)}
             </button>
           </div>
         </div>
@@ -200,69 +205,50 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 }
 
 const styles = {
-  page: { maxWidth: 480, margin: '0 auto', fontFamily: 'system-ui, sans-serif', paddingBottom: 180 },
-  pausedBanner: {
-    background: '#fff4e0', color: '#8a5a10', fontSize: 13.5, fontWeight: 600,
-    padding: '12px 16px', textAlign: 'center', borderBottom: '1px solid #f0d9a8',
-  },
-  content: { padding: '16px' },
+  page: { maxWidth: 480, margin: '0 auto', fontFamily: 'system-ui, sans-serif', paddingBottom: 210, background: '#FFFBF2' },
   videoFallback: {
     width: '100%', aspectRatio: '16/9', background: '#0B3D2E',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     color: '#fff', fontSize: 18, fontWeight: 700, textAlign: 'center', padding: 20, boxSizing: 'border-box',
   },
-  title: { fontSize: 22, marginTop: 16, marginBottom: 4 },
-  creator: { color: '#666', fontSize: 14, marginBottom: 16 },
-  potCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    background: '#f4f9f4',
-    border: '1px solid #cfe8cf',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 4,
+  videoCaption: {
+    fontSize: 13, color: '#8a8a8a', fontStyle: 'italic', textAlign: 'center',
+    margin: '10px 16px 0',
   },
-  jarOuter: { width: 56, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' },
-  jarLid: { width: 26, height: 8, background: '#1a7d3c', borderRadius: '4px 4px 2px 2px' },
-  jarBody: {
-    width: 48,
-    height: 58,
-    border: '2.5px solid #1a7d3c',
-    borderTop: 'none',
-    borderRadius: '4px 4px 16px 16px',
-    position: 'relative',
-    overflow: 'hidden',
-    background: 'rgba(255,255,255,0.6)',
+  pausedBanner: {
+    background: '#fff4e0', color: '#8a5a10', fontSize: 13.5, fontWeight: 600,
+    padding: '12px 16px', textAlign: 'center', margin: '14px 16px 0', borderRadius: 10,
   },
-  jarFill: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    background: 'linear-gradient(180deg, #F2A93B, #d9931f)',
-    transition: 'height 0.6s ease',
+  content: { padding: '20px 20px 8px' },
+  title: { fontSize: 26, fontWeight: 800, lineHeight: 1.25, margin: '0 0 18px', color: '#1A1A1A' },
+  storyLabel: { fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#999', fontWeight: 700, marginBottom: 8 },
+  storyQuote: {
+    margin: '0 0 26px', padding: '2px 0 2px 16px', borderLeft: '3px solid #F2A93B',
+    fontSize: 18, fontStyle: 'italic', color: '#333', lineHeight: 1.5, fontWeight: 500,
   },
-  potInfo: { flex: 1 },
-  potRaised: { fontSize: 22, fontWeight: 700, color: '#0B3D2E', lineHeight: 1.1 },
-  potGoal: { fontSize: 13, color: '#3a6b4a', marginTop: 2 },
-  potSupporters: { fontSize: 12.5, color: '#5a8a6a', marginTop: 4, fontWeight: 600 },
-  story: { marginTop: 20, lineHeight: 1.6, color: '#222', whiteSpace: 'pre-wrap' },
+  progressBlock: { margin: '0 0 12px' },
+  raisedRow: { display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10, flexWrap: 'wrap' },
+  raisedAmount: { fontSize: 34, fontWeight: 800, color: '#0B3D2E', lineHeight: 1 },
+  raisedGoal: { fontSize: 15, color: '#777', fontWeight: 500 },
+  progressBarBg: { background: '#eee', borderRadius: 999, height: 14, overflow: 'hidden' },
+  progressBarFill: { background: 'linear-gradient(90deg, #1a7d3c, #0B3D2E)', height: '100%', transition: 'width 0.6s ease' },
+  helpedLine: { fontSize: 14.5, color: '#444', marginTop: 10, fontWeight: 600 },
   stickyBar: {
-    position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff',
-    borderTop: '1px solid #e0e0e0', boxShadow: '0 -4px 12px rgba(0,0,0,0.08)',
+    position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFFBF2',
+    borderTop: '1px solid #e5ddc8', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',
   },
-  stickyInner: { maxWidth: 480, margin: '0 auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 },
+  stickyInner: { maxWidth: 480, margin: '0 auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 9, boxSizing: 'border-box' },
+  askLine: { fontSize: 14, fontWeight: 700, color: '#333', marginBottom: 1 },
   amountRow: { display: 'flex', gap: 6, flexWrap: 'wrap' },
-  multBtn: {
-    flex: '1 1 auto', padding: '8px 10px', borderRadius: 8, border: '1px solid #ccc',
-    background: '#fafafa', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+  amountBtn: {
+    flex: '1 1 auto', padding: '10px 8px', borderRadius: 8, border: '1.5px solid #ddd',
+    background: '#fff', fontSize: 14, fontWeight: 700, color: '#333', cursor: 'pointer', whiteSpace: 'nowrap',
   },
-  multBtnActive: { background: '#1a7d3c', color: '#fff', borderColor: '#1a7d3c' },
-  customInput: { padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14 },
-  nameToggle: { background: 'none', border: 'none', color: '#1a7d3c', fontSize: 13, textAlign: 'left', cursor: 'pointer', padding: 0 },
+  amountBtnActive: { background: '#0B3D2E', color: '#fff', borderColor: '#0B3D2E' },
+  customInput: { padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 14, boxSizing: 'border-box' },
+  noteToggle: { background: 'none', border: 'none', color: '#1a7d3c', fontSize: 13, textAlign: 'left', cursor: 'pointer', padding: 0 },
   donateBtn: {
-    padding: '14px', borderRadius: 10, border: 'none', background: '#1a7d3c',
-    color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer',
+    padding: '15px', borderRadius: 10, border: 'none', background: '#1a7d3c',
+    color: '#fff', fontSize: 16.5, fontWeight: 700, cursor: 'pointer', marginTop: 2,
   },
 };
