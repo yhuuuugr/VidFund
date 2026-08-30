@@ -184,11 +184,11 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
           <div style={styles.videoFallback}>{campaign.title}</div>
         )}
 
-        <p style={styles.videoCaption}>
-          {isCreatorSupport
-            ? `${firstName} recorded this to share with you.`
-            : `${firstName} recorded this video to tell you what happened.`}
-        </p>
+        {!isCreatorSupport && (
+          <p style={styles.videoCaption}>
+            {firstName} recorded this video to tell you what happened.
+          </p>
+        )}
 
         {isPaused && (
           <div style={styles.pausedBanner}>
@@ -208,10 +208,12 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
           {/* Progress — the number matters more than decoration here */}
           <div style={styles.progressBlock}>
-            <div style={styles.raisedRow}>
-              <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
-              {hasTarget && <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>}
-            </div>
+            {!isCreatorSupport && (
+              <div style={styles.raisedRow}>
+                <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
+                {hasTarget && <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>}
+              </div>
+            )}
             {hasTarget && (
               <div style={styles.progressBarBg}>
                 <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
@@ -224,24 +226,30 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
           {/* Sharing is what actually spreads the fundraiser — make it hard to miss */}
           <div style={styles.shareSection}>
-            <div style={styles.shareTitle}>
-              {isCreatorSupport ? `Support ${firstName}'s work` : `Help ${firstName} reach the goal`}
-            </div>
+            {!isCreatorSupport && (
+              <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
+            )}
             <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
-              Share on WhatsApp
+              {isCreatorSupport ? 'Share' : 'Share on WhatsApp'}
             </a>
-            <div style={styles.shareRow}>
-              <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
-              <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
-              <button onClick={copyShareLink} style={styles.shareSmallBtn}>
+            {isCreatorSupport ? (
+              <button onClick={copyShareLink} style={{ ...styles.shareSmallBtn, width: '100%', marginTop: 8 }}>
                 {linkCopied ? 'Copied!' : 'Copy link'}
               </button>
-            </div>
+            ) : (
+              <div style={styles.shareRow}>
+                <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
+                <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
+                <button onClick={copyShareLink} style={styles.shareSmallBtn}>
+                  {linkCopied ? 'Copied!' : 'Copy link'}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Honest trust signals only — no fabricated verification badges */}
           <div style={styles.trustLine}>
-            Fundraiser created by {campaign.creator_name} via VidFund · Payments processed securely by Paystack
+            Page created by {campaign.creator_name} via VidFund · Payments processed securely by Paystack
           </div>
 
           {recentDonations.length > 0 && (
@@ -260,6 +268,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             </div>
           )}
 
+          {!isCreatorSupport && (
           <div style={styles.reportWrap}>
             {!showReportForm ? (
               <button style={styles.reportLink} onClick={() => setShowReportForm(true)}>
@@ -298,6 +307,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               </form>
             )}
           </div>
+          )}
         </div>
 
         {/* Sticky donate bar - stays visible while video plays */}
