@@ -5,6 +5,16 @@ import Script from 'next/script';
 import { supabase } from '../../lib/supabaseClient';
 import VideoPlayer from './VideoPlayer';
 
+function timeAgo(dateStr) {
+  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [totals, setTotals] = useState(initialTotals);
   const [selectedAmount, setSelectedAmount] = useState(null); // null until first pick
@@ -13,6 +23,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [donorNote, setDonorNote] = useState('');
   const [showNoteField, setShowNoteField] = useState(false);
   const [paystackReady, setPaystackReady] = useState(false);
+  const [recentDonations, setRecentDonations] = useState([]);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const suggested = Number(campaign.suggested_amount);
   // Plain preset amounts — not "1x/2x/3x" multipliers, which read as
@@ -31,10 +43,39 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const goalTotal = suggested * targetUnits;
   const isPaused = campaign.status === 'paused';
 
+  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/${campaign.slug}` : '';
+  const shareText = `Help ${firstName} — ${campaign.title}`;
+  const shareLinks = {
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+    x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+  };
+
+  function copyShareLink() {
+    navigator.clipboard.writeText(shareUrl);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
   // Count this page load as a view — powers the creator dashboard.
   useEffect(() => {
     supabase.rpc('increment_campaign_view', { campaign_slug: campaign.slug });
   }, [campaign.slug]);
+
+  async function loadRecentDonations() {
+    const { data } = await supabase
+      .from('donations')
+      .select('amount, donor_name, created_at')
+      .eq('campaign_id', campaign.id)
+      .eq('status', 'success')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (data) setRecentDonations(data);
+  }
+
+  useEffect(() => {
+    loadRecentDonations();
+  }, [campaign.id]);
 
   // Refresh totals every 15s so the progress bar feels live without a full backend push setup
   useEffect(() => {
@@ -45,6 +86,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         .eq('slug', campaign.slug)
         .single();
       if (data) setTotals(data);
+      loadRecentDonations();
     }, 15000);
     return () => clearInterval(interval);
   }, [campaign.slug]);
@@ -133,6 +175,42 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               {Math.floor(unitsSoFar).toLocaleString()} people have helped {firstName}
             </div>
           </div>
+
+          {/* Sharing is what actually spreads the fundraiser — make it hard to miss */}
+          <div style={styles.shareSection}>
+            <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
+            <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
+              Share on WhatsApp
+            </a>
+            <div style={styles.shareRow}>
+              <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
+              <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
+              <button onClick={copyShareLink} style={styles.shareSmallBtn}>
+                {linkCopied ? 'Copied!' : 'Copy link'}
+              </button>
+            </div>
+          </div>
+
+          {/* Honest trust signals only — no fabricated verification badges */}
+          <div style={styles.trustLine}>
+            Fundraiser created by {campaign.creator_name} via VidFund · Payments processed securely by Paystack
+          </div>
+
+          {recentDonations.length > 0 && (
+            <div style={styles.recentSection}>
+              <div style={styles.storyLabel}>Recent support</div>
+              {recentDonations.map((d, i) => (
+                <div key={i} style={styles.recentRow}>
+                  <span style={styles.recentHeart}>❤️</span>
+                  <span style={styles.recentName}>
+                    {d.donor_name && d.donor_name !== 'Anonymous' ? d.donor_name : 'Anonymous'}
+                  </span>
+                  <span style={styles.recentAmount}>₵{Number(d.amount).toFixed(0)}</span>
+                  <span style={styles.recentTime}>{timeAgo(d.created_at)}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Sticky donate bar - stays visible while video plays */}
@@ -233,6 +311,31 @@ const styles = {
   progressBarBg: { background: '#eee', borderRadius: 999, height: 14, overflow: 'hidden' },
   progressBarFill: { background: 'linear-gradient(90deg, #1a7d3c, #0B3D2E)', height: '100%', transition: 'width 0.6s ease' },
   helpedLine: { fontSize: 14.5, color: '#444', marginTop: 10, fontWeight: 600 },
+  shareSection: {
+    marginTop: 28, background: '#f4f9f4', border: '1px solid #cfe8cf',
+    borderRadius: 14, padding: 16,
+  },
+  shareTitle: { fontSize: 15.5, fontWeight: 700, color: '#0B3D2E', marginBottom: 12 },
+  whatsappBtn: {
+    display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
+    background: '#25D366', color: '#fff', fontSize: 15.5, fontWeight: 700,
+    padding: '13px', borderRadius: 10, textDecoration: 'none', marginBottom: 10,
+  },
+  shareRow: { display: 'flex', gap: 8 },
+  shareSmallBtn: {
+    flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8,
+    border: '1px solid #cfe8cf', background: '#fff', color: '#2a6b2a',
+    fontSize: 13, fontWeight: 700, textDecoration: 'none', cursor: 'pointer',
+  },
+  trustLine: {
+    marginTop: 18, fontSize: 12, color: '#999', lineHeight: 1.5, textAlign: 'center',
+  },
+  recentSection: { marginTop: 26, paddingBottom: 4 },
+  recentRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #f2f2f2' },
+  recentHeart: { fontSize: 13, flexShrink: 0 },
+  recentName: { fontSize: 13.5, color: '#333', fontWeight: 600, flex: 1 },
+  recentAmount: { fontSize: 13.5, color: '#0B3D2E', fontWeight: 700 },
+  recentTime: { fontSize: 11.5, color: '#aaa', marginLeft: 6, whiteSpace: 'nowrap' },
   stickyBar: {
     position: 'fixed', bottom: 0, left: 0, right: 0, background: '#FFFBF2',
     borderTop: '1px solid #e5ddc8', boxShadow: '0 -6px 16px rgba(0,0,0,0.06)',
