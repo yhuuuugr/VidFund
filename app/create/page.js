@@ -475,7 +475,8 @@ export default function CreateCampaign() {
           {buttonLabel}
         </button>
         <p style={styles.termsNote}>
-          By publishing, you agree to VidFund's <Link href="/terms" style={styles.signOutLink}>Terms of Service</Link>.
+          By publishing, you agree to VidFund's <Link href="/terms" style={styles.signOutLink}>Terms of Service</Link> and{' '}
+          <Link href="/privacy" style={styles.signOutLink}>Privacy Policy</Link>.
         </p>
       </form>
     </main>
