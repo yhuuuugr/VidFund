@@ -314,7 +314,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         {!isPaused && (
         <div style={styles.stickyBar}>
           <div style={styles.stickyInner}>
-            <div style={styles.askLine}>Would you like to help?</div>
+            <div style={styles.askLine}>
+              {isCreatorSupport ? `Tip ${firstName} for this video?` : 'Would you like to help?'}
+            </div>
 
             <div style={styles.amountRow}>
               {presetAmounts.map((amt) => (
@@ -369,7 +371,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             )}
 
             <button style={styles.donateBtn} onClick={startPayment}>
-              Support {firstName} with ₵{amount.toFixed(0)}
+              {isCreatorSupport ? `Tip ${firstName} ₵${amount.toFixed(0)}` : `Support ${firstName} with ₵${amount.toFixed(0)}`}
             </button>
           </div>
         </div>
