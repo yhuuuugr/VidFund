@@ -11,7 +11,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${campaign.title} — ₵${raised.toLocaleString()} raised`,
-    description: campaign.story.slice(0, 150),
+    description: campaign.story ? campaign.story.slice(0, 150) : `Support ${campaign.creator_name || 'this creator'} on VidFund.`,
     openGraph: {
       title: campaign.title,
       description: `₵${raised.toLocaleString()} raised so far. Help push it further.`,
