@@ -13,6 +13,7 @@ const CATEGORIES = [
   { id: 'education', label: 'Education', emoji: '🎓' },
   { id: 'business', label: 'Small business', emoji: '💼' },
   { id: 'creative', label: 'Creative project', emoji: '🎨' },
+  { id: 'creator', label: 'Creator support', emoji: '🎬' },
   { id: 'sports', label: 'Sports', emoji: '⚽' },
   { id: 'community', label: 'Community', emoji: '🏘️' },
   { id: 'animals', label: 'Animal welfare', emoji: '🐶' },

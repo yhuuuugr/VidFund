@@ -35,6 +35,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   // quantities/products rather than donation amounts.
   const presetAmounts = [1, 2, 3, 5].map((m) => suggested * m);
   const firstName = (campaign.creator_name || 'them').trim().split(' ')[0];
+  const isCreatorSupport = campaign.category === 'creator';
 
   const amount = useMemo(() => {
     if (showCustom) return Number(customAmount) || 0;
@@ -195,7 +196,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
 
-          <div style={styles.storyLabel}>{firstName}'s story</div>
+          <div style={styles.storyLabel}>{isCreatorSupport ? `About ${firstName}` : `${firstName}'s story`}</div>
           <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
 
           {/* Progress — the number matters more than decoration here */}
@@ -208,13 +209,15 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
             </div>
             <div style={styles.helpedLine}>
-              {Math.floor(unitsSoFar).toLocaleString()} people have helped {firstName}
+              {Math.floor(unitsSoFar).toLocaleString()} {isCreatorSupport ? `fans are supporting ${firstName}` : `people have helped ${firstName}`}
             </div>
           </div>
 
           {/* Sharing is what actually spreads the fundraiser — make it hard to miss */}
           <div style={styles.shareSection}>
-            <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
+            <div style={styles.shareTitle}>
+              {isCreatorSupport ? `Support ${firstName}'s work` : `Help ${firstName} reach the goal`}
+            </div>
             <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
               Share on WhatsApp
             </a>

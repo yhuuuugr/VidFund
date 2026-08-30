@@ -114,6 +114,10 @@ export default function Home() {
           </div>
         </section>
 
+        <p className="creator-note">
+          Also a content creator? Get the same kind of support from your fans — record a video, set an amount, share your link.
+        </p>
+
         <footer>
           <Link href="/create" className="foot-cta">Start your fundraiser</Link>
           <div className="tag">VidFund — built for Ghana</div>
@@ -246,4 +250,5 @@ const styles = `
   footer .tag { font-size: 12px; color: #999; }
   footer .legal-links { margin-top: 8px; }
   footer .terms-link { font-size: 12px; color: #999; text-decoration: underline; }
+  .creator-note { font-size: 13px; color: #999; text-align: center; padding: 0 10px; margin: 4px 0 0; line-height: 1.5; }
 `;
