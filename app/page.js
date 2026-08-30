@@ -117,6 +117,7 @@ export default function Home() {
         <footer>
           <Link href="/create" className="foot-cta">Start your fundraiser</Link>
           <div className="tag">VidFund — built for Ghana</div>
+          <Link href="/terms" className="terms-link">Terms of Service</Link>
         </footer>
       </div>
     </>
@@ -239,4 +240,5 @@ const styles = `
   footer .foot-cta { display: block; width: 100%; box-sizing: border-box; background: var(--green); color: #fff; font-weight: 700; font-size: 16px; padding: 16px; border-radius: 12px; text-decoration: none; margin-bottom: 14px; transition: transform 0.1s; }
   footer .foot-cta:active { transform: scale(0.98); }
   footer .tag { font-size: 12px; color: #999; }
+  footer .terms-link { display: block; font-size: 12px; color: #999; margin-top: 8px; text-decoration: underline; }
 `;

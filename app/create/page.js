@@ -474,6 +474,9 @@ export default function CreateCampaign() {
         <button style={styles.submitBtn} type="submit" disabled={submitting}>
           {buttonLabel}
         </button>
+        <p style={styles.termsNote}>
+          By publishing, you agree to VidFund's <Link href="/terms" style={styles.signOutLink}>Terms of Service</Link>.
+        </p>
       </form>
     </main>
     </>
@@ -549,6 +552,7 @@ const styles = {
   peopleValue: { fontSize: 18, color: '#1a7d3c', fontWeight: 700 },
   calcNote: { fontSize: 14, color: '#2a6b2a', margin: 0 },
   signedInAs: { fontSize: 12.5, color: '#888', textAlign: 'center', margin: 0 },
+  termsNote: { fontSize: 11.5, color: '#aaa', textAlign: 'center', margin: 0 },
   signOutLink: { background: 'none', border: 'none', color: '#1a7d3c', fontWeight: 600, fontSize: 12.5, cursor: 'pointer', padding: 0, textDecoration: 'underline' },
   error: { color: '#c0392b', fontSize: 14 },
   submitBtn: {
