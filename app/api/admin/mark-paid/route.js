@@ -52,8 +52,9 @@ export async function POST(req) {
   }
 
   const unpaidBalance = (unpaidDonations || []).reduce((sum, d) => sum + Number(d.amount), 0);
+  const donationIds = (unpaidDonations || []).map((d) => d.id);
 
-  if (unpaidBalance <= 0) {
+  if (unpaidBalance <= 0 || donationIds.length === 0) {
     return NextResponse.json({ error: 'Nothing unpaid for this campaign' }, { status: 400 });
   }
 
@@ -71,11 +72,14 @@ export async function POST(req) {
     return NextResponse.json({ error: payoutError.message }, { status: 500 });
   }
 
+  // Update only the exact donations we counted above (by id) — not "whatever
+  // is still unpaid right now" — so a donation that succeeds in the gap
+  // between the select and this update can't get marked paid without its
+  // amount ever having been included in the payout.
   const { error: updateDonationsError } = await supabaseAdmin
     .from('donations')
     .update({ payout_status: 'paid' })
-    .eq('campaign_id', campaign_id)
-    .eq('status', 'success')
+    .in('id', donationIds)
     .eq('payout_status', 'unpaid');
 
   if (updateDonationsError) {
