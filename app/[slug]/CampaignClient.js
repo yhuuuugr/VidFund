@@ -208,57 +208,88 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
           </div>
         )}
 
+        {isCreatorSupport ? (
+          <div style={styles.content}>
+            <h1 style={styles.title}>{campaign.title}</h1>
+
+            {/* Never frame a fresh page as empty — invite the first supporter instead */}
+            <div style={styles.helpedLine}>
+              {unitsSoFar > 0
+                ? `${Math.floor(unitsSoFar).toLocaleString()} fans are supporting ${firstName}`
+                : `Be the first to support ${firstName}`}
+            </div>
+
+            <button onClick={handleNativeShare} style={styles.smallShareBtn}>
+              {linkCopied ? 'Link copied!' : 'Share'}
+            </button>
+
+            {campaign.story && (
+              <>
+                <div style={styles.storyLabel}>Why I'm asking</div>
+                <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
+              </>
+            )}
+
+            <div style={styles.trustLine}>
+              Created by {campaign.creator_name} via VidFund
+            </div>
+
+            {recentDonations.length > 0 && (
+              <div style={styles.recentSection}>
+                <div style={styles.storyLabel}>Recent support</div>
+                {recentDonations.map((d, i) => (
+                  <div key={i} style={styles.recentRow}>
+                    <span style={styles.recentHeart}>❤️</span>
+                    <span style={styles.recentName}>
+                      {d.donor_name && d.donor_name !== 'Anonymous' ? d.donor_name : 'Anonymous'}
+                    </span>
+                    <span style={styles.recentAmount}>₵{Number(d.amount).toFixed(0)}</span>
+                    <span style={styles.recentTime}>{timeAgo(d.created_at)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
         <div style={styles.content}>
           <h1 style={styles.title}>{campaign.title}</h1>
 
           {campaign.story && (
             <>
-              <div style={styles.storyLabel}>{isCreatorSupport ? `About ${firstName}` : `${firstName}'s story`}</div>
+              <div style={styles.storyLabel}>{firstName}'s story</div>
               <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
             </>
           )}
 
           {/* Progress — the number matters more than decoration here */}
           <div style={styles.progressBlock}>
-            {!isCreatorSupport && (
-              <div style={styles.raisedRow}>
-                <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
-                {hasTarget && <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>}
-              </div>
-            )}
+            <div style={styles.raisedRow}>
+              <span style={styles.raisedAmount}>₵{(totals?.total_raised || 0).toLocaleString()}</span>
+              {hasTarget && <span style={styles.raisedGoal}>raised of ₵{goalTotal.toLocaleString()}</span>}
+            </div>
             {hasTarget && (
               <div style={styles.progressBarBg}>
                 <div style={{ ...styles.progressBarFill, width: `${progressPct}%` }} />
               </div>
             )}
             <div style={styles.helpedLine}>
-              {Math.floor(unitsSoFar).toLocaleString()} {isCreatorSupport ? `fans are supporting ${firstName}` : `people have helped ${firstName}`}
+              {Math.floor(unitsSoFar).toLocaleString()} people have helped {firstName}
             </div>
           </div>
 
           {/* Sharing is what actually spreads the fundraiser — make it hard to miss */}
           <div style={styles.shareSection}>
-            {!isCreatorSupport && (
-              <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
-            )}
-            {isCreatorSupport ? (
-              <button onClick={handleNativeShare} style={styles.nativeShareBtn}>
-                {linkCopied ? 'Link copied!' : 'Share video'}
+            <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
+            <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
+              Share on WhatsApp
+            </a>
+            <div style={styles.shareRow}>
+              <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
+              <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
+              <button onClick={copyShareLink} style={styles.shareSmallBtn}>
+                {linkCopied ? 'Copied!' : 'Copy link'}
               </button>
-            ) : (
-              <>
-                <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
-                  Share on WhatsApp
-                </a>
-                <div style={styles.shareRow}>
-                  <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
-                  <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
-                  <button onClick={copyShareLink} style={styles.shareSmallBtn}>
-                    {linkCopied ? 'Copied!' : 'Copy link'}
-                  </button>
-                </div>
-              </>
-            )}
+            </div>
           </div>
 
           {/* Honest trust signals only — no fabricated verification badges */}
@@ -282,7 +313,6 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             </div>
           )}
 
-          {!isCreatorSupport && (
           <div style={styles.reportWrap}>
             {!showReportForm ? (
               <button style={styles.reportLink} onClick={() => setShowReportForm(true)}>
@@ -321,8 +351,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               </form>
             )}
           </div>
-          )}
         </div>
+        )}
 
         {/* Sticky donate bar - stays visible while video plays */}
         {!isPaused && (
@@ -438,6 +468,11 @@ const styles = {
     display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
     background: '#1a7d3c', color: '#fff', fontSize: 15.5, fontWeight: 700,
     padding: '13px', borderRadius: 10, border: 'none', cursor: 'pointer',
+  },
+  smallShareBtn: {
+    display: 'inline-block', background: '#f4f9f4', color: '#1a7d3c', border: '1px solid #cfe8cf',
+    fontSize: 13, fontWeight: 700, padding: '7px 16px', borderRadius: 999, cursor: 'pointer',
+    marginTop: 10, marginBottom: 4,
   },
   shareRow: { display: 'flex', gap: 8 },
   shareSmallBtn: {

@@ -52,6 +52,7 @@ export default function CreatorSupportPage() {
   }
 
   const [title, setTitle] = useState('');
+  const [whyMessage, setWhyMessage] = useState('');
   const [videoFile, setVideoFile] = useState(null);
   const [suggestedAmount, setSuggestedAmount] = useState(10);
   const [creatorName, setCreatorName] = useState('');
@@ -187,7 +188,7 @@ export default function CreatorSupportPage() {
       const { error: insertError } = await supabase.from('campaigns').insert({
         slug,
         title,
-        story: null,
+        story: whyMessage,
         category: 'creator',
         video_url: finalVideoUrl,
         suggested_amount: suggested,
@@ -281,6 +282,17 @@ export default function CreatorSupportPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Support my music"
+              required
+            />
+          </label>
+
+          <label style={styles.label}>
+            Why are you asking?
+            <textarea
+              style={{ ...styles.input, minHeight: 90 }}
+              value={whyMessage}
+              onChange={(e) => setWhyMessage(e.target.value)}
+              placeholder="A short message telling fans what their support goes toward."
               required
             />
           </label>
