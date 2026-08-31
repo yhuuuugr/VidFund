@@ -63,6 +63,18 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
     setTimeout(() => setLinkCopied(false), 2000);
   }
 
+  async function handleNativeShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: campaign.title, text: shareText, url: shareUrl });
+      } catch (e) {
+        // user cancelled the share sheet — not an error
+      }
+    } else {
+      copyShareLink();
+    }
+  }
+
   async function submitReport(e) {
     e.preventDefault();
     if (reportReason.trim().length < 10) {
@@ -230,14 +242,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
             )}
             {isCreatorSupport ? (
-              <div style={styles.shareRow}>
-                <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={{ ...styles.whatsappBtn, flex: 1, marginBottom: 0 }}>
-                  Share
-                </a>
-                <button onClick={copyShareLink} style={styles.shareSmallBtn}>
-                  {linkCopied ? 'Copied!' : 'Copy link'}
-                </button>
-              </div>
+              <button onClick={handleNativeShare} style={styles.nativeShareBtn}>
+                {linkCopied ? 'Link copied!' : 'Share video'}
+              </button>
             ) : (
               <>
                 <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
@@ -426,6 +433,11 @@ const styles = {
     display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
     background: '#25D366', color: '#fff', fontSize: 15.5, fontWeight: 700,
     padding: '13px', borderRadius: 10, textDecoration: 'none', marginBottom: 10,
+  },
+  nativeShareBtn: {
+    display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
+    background: '#1a7d3c', color: '#fff', fontSize: 15.5, fontWeight: 700,
+    padding: '13px', borderRadius: 10, border: 'none', cursor: 'pointer',
   },
   shareRow: { display: 'flex', gap: 8 },
   shareSmallBtn: {
