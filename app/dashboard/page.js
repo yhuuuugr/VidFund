@@ -138,25 +138,27 @@ export default function Dashboard() {
     );
     if (!confirmed) return;
 
-    await supabase.from('payouts').insert({
-      campaign_id: campaignId,
-      amount: payoutAmount,
-      momo_number: '', // filled from campaign record server-side if you extend this
-      paid_by: 'you',
-    });
-
-    await supabase
-      .from('donations')
-      .update({ payout_status: 'paid' })
-      .eq('campaign_id', campaignId)
-      .eq('status', 'success')
-      .eq('payout_status', 'unpaid');
-
-    // Clear the request flag now that it's been handled
-    await supabase
-      .from('campaigns')
-      .update({ withdrawal_requested_at: null })
-      .eq('id', campaignId);
+    // Payouts/donations have no client write access (see supabase/schema.sql) —
+    // this has to go through a server route using the service role key.
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/mark-paid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${currentSession.access_token}`,
+        },
+        body: JSON.stringify({ campaign_id: campaignId }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(`Error: ${result.error}`);
+        return;
+      }
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+      return;
+    }
 
     loadCampaigns();
   }
