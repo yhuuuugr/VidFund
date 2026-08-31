@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [reportActionLoading, setReportActionLoading] = useState(null); // report id currently processing
+  const [markPaidLoading, setMarkPaidLoading] = useState(null); // campaign id currently processing
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -138,27 +139,30 @@ export default function Dashboard() {
     );
     if (!confirmed) return;
 
-    await supabase.from('payouts').insert({
-      campaign_id: campaignId,
-      amount: payoutAmount,
-      momo_number: '', // filled from campaign record server-side if you extend this
-      paid_by: 'you',
-    });
+    setMarkPaidLoading(campaignId);
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/admin/mark-paid', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${currentSession.access_token}`,
+        },
+        body: JSON.stringify({ campaign_id: campaignId }),
+      });
+      const result = await res.json();
 
-    await supabase
-      .from('donations')
-      .update({ payout_status: 'paid' })
-      .eq('campaign_id', campaignId)
-      .eq('status', 'success')
-      .eq('payout_status', 'unpaid');
+      if (!res.ok) {
+        alert(`Error: ${result.error}`);
+        return; // don't refresh on failure — nothing changed
+      }
 
-    // Clear the request flag now that it's been handled
-    await supabase
-      .from('campaigns')
-      .update({ withdrawal_requested_at: null })
-      .eq('id', campaignId);
-
-    loadCampaigns();
+      loadCampaigns();
+    } catch (err) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setMarkPaidLoading(null);
+    }
   }
 
   // --- Auth gates ---
@@ -301,9 +305,10 @@ export default function Dashboard() {
                   ) : unpaid > 0 && (
                     <button
                       onClick={() => markPaidOut(c.campaign_id, unpaid)}
+                      disabled={markPaidLoading === c.campaign_id}
                       style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#1a7d3c', color: '#fff', cursor: 'pointer' }}
                     >
-                      Mark paid
+                      {markPaidLoading === c.campaign_id ? 'Marking…' : 'Mark paid'}
                     </button>
                   )}
                 </td>
