@@ -27,7 +27,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [reportActionLoading, setReportActionLoading] = useState(null); // report id currently processing
-  const [markPaidLoading, setMarkPaidLoading] = useState(null); // campaign id currently processing
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -139,7 +138,8 @@ export default function Dashboard() {
     );
     if (!confirmed) return;
 
-    setMarkPaidLoading(campaignId);
+    // Payouts/donations have no client write access (see supabase/schema.sql) —
+    // this has to go through a server route using the service role key.
     try {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       const res = await fetch('/api/admin/mark-paid', {
@@ -151,18 +151,16 @@ export default function Dashboard() {
         body: JSON.stringify({ campaign_id: campaignId }),
       });
       const result = await res.json();
-
       if (!res.ok) {
         alert(`Error: ${result.error}`);
-        return; // don't refresh on failure — nothing changed
+        return;
       }
-
-      loadCampaigns();
     } catch (err) {
       alert(`Error: ${err.message}`);
-    } finally {
-      setMarkPaidLoading(null);
+      return;
     }
+
+    loadCampaigns();
   }
 
   // --- Auth gates ---
@@ -305,10 +303,9 @@ export default function Dashboard() {
                   ) : unpaid > 0 && (
                     <button
                       onClick={() => markPaidOut(c.campaign_id, unpaid)}
-                      disabled={markPaidLoading === c.campaign_id}
                       style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#1a7d3c', color: '#fff', cursor: 'pointer' }}
                     >
-                      {markPaidLoading === c.campaign_id ? 'Marking…' : 'Mark paid'}
+                      Mark paid
                     </button>
                   )}
                 </td>
