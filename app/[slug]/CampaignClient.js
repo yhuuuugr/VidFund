@@ -29,6 +29,10 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [reportReason, setReportReason] = useState('');
   const [reportContact, setReportContact] = useState('');
   const [reportStatus, setReportStatus] = useState('idle'); // idle | submitting | done | error
+  const [moreVideos, setMoreVideos] = useState([]);
+  const [videoEnded, setVideoEnded] = useState(false);
+  const [showMoreList, setShowMoreList] = useState(false);
+  const [isUnlocked, setIsUnlocked] = useState(false);
 
   const suggested = Number(campaign.suggested_amount);
   // Plain preset amounts — not "1x/2x/3x" multipliers, which read as
@@ -36,6 +40,26 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const presetAmounts = [1, 2, 3, 5].map((m) => suggested * m);
   const firstName = (campaign.creator_name || 'them').trim().split(' ')[0];
   const isCreatorSupport = campaign.category === 'creator';
+  const unlockKey = `vidfund_unlocked_${campaign.creator_email}`;
+
+  // If this creator has other videos, fetch them so "watch more" can appear
+  // once the current one finishes. Contributing unlocks browsing the rest.
+  useEffect(() => {
+    if (!isCreatorSupport || !campaign.creator_email) return;
+    supabase
+      .from('campaigns')
+      .select('slug, title')
+      .eq('creator_email', campaign.creator_email)
+      .eq('category', 'creator')
+      .eq('status', 'active')
+      .neq('id', campaign.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setMoreVideos(data || []));
+
+    if (typeof window !== 'undefined') {
+      setIsUnlocked(localStorage.getItem(unlockKey) === 'true');
+    }
+  }, [isCreatorSupport, campaign.creator_email, campaign.id, unlockKey]);
 
   const amount = useMemo(() => {
     if (showCustom) return Number(customAmount) || 0;
@@ -160,6 +184,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             donor_name: donorNote || null,
           }),
         }).then(() => {
+          if (isCreatorSupport && campaign.creator_email && typeof window !== 'undefined') {
+            localStorage.setItem(unlockKey, 'true');
+          }
           window.location.reload();
         });
       },
@@ -191,7 +218,12 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
       <main style={styles.page}>
         {/* The video is the whole point — it dominates the page */}
         {campaign.video_url ? (
-          <VideoPlayer src={campaign.video_url} portraitHeight={isCreatorSupport ? '62vh' : '48vh'} />
+          <VideoPlayer
+            src={campaign.video_url}
+            portraitHeight={isCreatorSupport ? '62vh' : '48vh'}
+            loop={moreVideos.length === 0}
+            onEnded={() => setVideoEnded(true)}
+          />
         ) : (
           <div style={styles.videoFallback}>{campaign.title}</div>
         )}
@@ -228,6 +260,41 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
                 <div style={styles.storyLabel}>Why I'm asking</div>
                 <blockquote style={styles.storyQuote}>"{campaign.story}"</blockquote>
               </>
+            )}
+
+            {videoEnded && moreVideos.length > 0 && (
+              <div style={styles.watchMoreBox}>
+                {isUnlocked ? (
+                  !showMoreList ? (
+                    <button style={styles.watchMoreBtn} onClick={() => setShowMoreList(true)}>
+                      Watch {moreVideos.length} more video{moreVideos.length > 1 ? 's' : ''} from {firstName} →
+                    </button>
+                  ) : (
+                    <>
+                      <div style={styles.storyLabel}>More from {firstName}</div>
+                      {moreVideos.map((v) => (
+                        <a key={v.slug} href={`/${v.slug}`} style={styles.moreVideoLink}>
+                          🎥 {v.title}
+                        </a>
+                      ))}
+                    </>
+                  )
+                ) : (
+                  <>
+                    <button
+                      style={styles.watchMoreBtnLocked}
+                      onClick={() => setShowMoreList(true)}
+                    >
+                      🔒 Watch {moreVideos.length} more video{moreVideos.length > 1 ? 's' : ''} from {firstName}
+                    </button>
+                    {showMoreList && (
+                      <p style={styles.lockedNote}>
+                        Tip {firstName} anything below to unlock their other videos on this device.
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             )}
 
             <div style={styles.trustLine}>
@@ -473,6 +540,24 @@ const styles = {
     display: 'inline-block', background: '#f4f9f4', color: '#1a7d3c', border: '1px solid #cfe8cf',
     fontSize: 13, fontWeight: 700, padding: '7px 16px', borderRadius: 999, cursor: 'pointer',
     marginTop: 10, marginBottom: 4,
+  },
+  watchMoreBox: {
+    marginTop: 22, background: '#f4f9f4', border: '1px solid #cfe8cf', borderRadius: 14, padding: 16,
+  },
+  watchMoreBtn: {
+    display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'center',
+    background: '#0B3D2E', color: '#fff', fontSize: 14.5, fontWeight: 700,
+    padding: '13px', borderRadius: 10, border: 'none', textDecoration: 'none', cursor: 'pointer',
+  },
+  watchMoreBtnLocked: {
+    display: 'block', width: '100%', boxSizing: 'border-box', textAlign: 'center',
+    background: '#fff', color: '#0B3D2E', fontSize: 14.5, fontWeight: 700,
+    padding: '13px', borderRadius: 10, border: '1.5px dashed #cfe8cf', cursor: 'pointer',
+  },
+  lockedNote: { fontSize: 13, color: '#666', textAlign: 'center', marginTop: 10, marginBottom: 0, lineHeight: 1.5 },
+  moreVideoLink: {
+    display: 'block', fontSize: 14, color: '#0B3D2E', fontWeight: 600, textDecoration: 'none',
+    padding: '10px 0', borderBottom: '1px solid #e5e5e5',
   },
   shareRow: { display: 'flex', gap: 8 },
   shareSmallBtn: {

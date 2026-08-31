@@ -9,7 +9,7 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
+export default function VideoPlayer({ src, portraitHeight = '48vh', loop = true, onEnded }) {
   const videoRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
@@ -98,7 +98,7 @@ export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
         src={src}
         autoPlay
         muted
-        loop
+        loop={loop}
         playsInline
         preload="auto"
         style={videoStyle}
@@ -110,6 +110,7 @@ export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
         }}
         onPlay={() => setIsPlaying(true)}
         onPause={() => setIsPlaying(false)}
+        onEnded={onEnded}
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
         onCanPlay={() => setIsBuffering(false)}
