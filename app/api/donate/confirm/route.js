@@ -20,6 +20,14 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Payment not verified' }, { status: 400 });
   }
 
+  // Trust only the campaign_id Paystack recorded at charge time (from its own
+  // metadata), not whatever campaign_id the browser sends here — otherwise a
+  // donor could pay for one campaign and attribute the money to another.
+  const verifiedCampaignId = verifyData.data.metadata?.campaign_id;
+  if (verifiedCampaignId && verifiedCampaignId !== campaign_id) {
+    return NextResponse.json({ error: 'Campaign mismatch for this payment' }, { status: 400 });
+  }
+
   const amountGHS = verifyData.data.amount / 100;
 
   const { data: campaign } = await supabaseAdmin
