@@ -269,6 +269,7 @@ const styles = `
     opacity: 0;
     animation: fadeUp 0.6s ease-out 0.62s forwards;
     margin-bottom: 30px;
+    perspective: 600px;
   }
   .recordDot {
     position: absolute; top: 14px; left: 16px;
@@ -276,15 +277,20 @@ const styles = `
     animation: blink 1.4s ease-in-out infinite;
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .camWrap { display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 6px; }
+  .camWrap {
+    display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 6px;
+    opacity: 0;
+    animation: settleCam 0.7s cubic-bezier(0.2,0.9,0.3,1) forwards;
+  }
   .camImg {
     max-height: 140px; max-width: 88%; object-fit: contain;
     filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45));
-    animation: floatCam 4.5s ease-in-out infinite, settleCam 0.7s cubic-bezier(0.2,0.9,0.3,1) both;
+    animation: moveBackFront 4s ease-in-out infinite;
+    transform-origin: center bottom;
   }
-  @keyframes floatCam {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-10px) rotate(-1.2deg); }
+  @keyframes moveBackFront {
+    0%, 100% { transform: translateZ(0) scale(1); filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45)); }
+    50%      { transform: translateZ(60px) scale(1.09); filter: drop-shadow(0 20px 22px rgba(0,0,0,0.55)); }
   }
   @keyframes settleCam {
     from { opacity: 0; transform: translateY(30px) scale(0.92); }
