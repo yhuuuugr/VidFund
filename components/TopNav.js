@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { supabase } from '../lib/supabaseClient';
 
 export default function TopNav() {
@@ -19,6 +20,7 @@ export default function TopNav() {
   return (
     <div style={styles.bar}>
       <Link href="/" style={styles.wordmark}>
+        <Image src="/vidfund-icon.png" alt="" width={26} height={26} style={styles.wordmarkIcon} />
         VidFund<span style={{ color: '#F2A93B' }}>.</span>
       </Link>
 
@@ -66,6 +68,10 @@ const styles = {
   wordmark: {
     fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 16,
     color: '#1A1A1A', textDecoration: 'none',
+    display: 'flex', alignItems: 'center', gap: 8,
+  },
+  wordmarkIcon: {
+    display: 'block',
   },
   accountWrap: { position: 'relative' },
   accountBtn: {
