@@ -5,20 +5,8 @@ import Link from 'next/link';
 
 export default function Home() {
   const totalRef = useRef(null);
-  const coinGridRef = useRef(null);
 
   useEffect(() => {
-    const grid = coinGridRef.current;
-    if (grid) {
-      grid.innerHTML = '';
-      for (let i = 0; i < 30; i++) {
-        const coin = document.createElement('div');
-        coin.className = 'coin';
-        coin.style.animationDelay = `${i * 0.025}s, ${2 + Math.random() * 2}s`;
-        grid.appendChild(coin);
-      }
-    }
-
     const totalEl = totalRef.current;
     let start = null;
     const target = 8000;
@@ -74,7 +62,7 @@ export default function Home() {
         <section className="philosophy">
           <div className="tally">
             <div className="tally-label">You don't need one person to give ₵8,000</div>
-            <div className="coin-grid" ref={coinGridRef} />
+            <div className="coin-grid" />
             <div className="tally-sum">
               <span>You can get ₵5 from 1,600 people</span>
               <span className="total" ref={totalRef}>= ₵0</span>
@@ -201,10 +189,18 @@ const styles = `
   .philosophy { padding-bottom: 10px; }
   .tally { background: var(--green); border-radius: 18px; padding: 22px 20px 20px; color: #fff; position: relative; overflow: hidden; }
   .tally-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 12px; font-weight: 600; line-height: 1.4; }
-  .coin-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-bottom: 16px; }
-  .coin { aspect-ratio: 1; border-radius: 50%; background: var(--gold); opacity: 0; transform: scale(0.3); animation: pop 0.35s ease-out forwards, glint 3s ease-in-out infinite; }
-  @keyframes pop { to { opacity: 1; transform: scale(1); } }
-  @keyframes glint { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+  .coin-grid {
+    aspect-ratio: 2229 / 768;
+    background-image: url('/coins-grid.jpg');
+    background-size: cover;
+    background-position: center;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    opacity: 0;
+    transform: scale(0.97);
+    animation: reveal 0.6s ease-out 0.1s forwards;
+  }
+  @keyframes reveal { to { opacity: 1; transform: scale(1); } }
   .tally-sum { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: rgba(255,255,255,0.9); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .tally-sum .total { font-size: 20px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
