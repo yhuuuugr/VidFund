@@ -283,7 +283,7 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
                 {isUnlocked ? (
                   !showMoreList ? (
                     <button style={styles.watchMoreBtn} onClick={() => setShowMoreList(true)}>
-                      Watch {moreVideos.length} more video{moreVideos.length > 1 ? 's' : ''} from {firstName} →
+                      Watch more videos from {firstName} →
                     </button>
                   ) : (
                     <>
@@ -296,19 +296,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
                     </>
                   )
                 ) : (
-                  <>
-                    <button
-                      style={styles.watchMoreBtnLocked}
-                      onClick={() => setShowMoreList(true)}
-                    >
-                      🔒 Watch {moreVideos.length} more video{moreVideos.length > 1 ? 's' : ''} from {firstName}
-                    </button>
-                    {showMoreList && (
-                      <p style={styles.lockedNote}>
-                        Tip {firstName} anything below to unlock their other videos on this device.
-                      </p>
-                    )}
-                  </>
+                  <button style={styles.watchMoreBtnLocked} onClick={startPayment}>
+                    Watch more videos from {firstName}
+                  </button>
                 )}
               </div>
             )}
