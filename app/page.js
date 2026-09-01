@@ -142,7 +142,9 @@ export default function Home() {
           {/* Visual cue: this is a video-first platform */}
           <div className="recordCard">
             <div className="recordDot" />
-            <div className="recordIcon">🎥</div>
+            <div className="camWrap">
+              <img className="camImg" src="/record-camera.png" alt="Video camera" />
+            </div>
             <div className="recordCaption">Record right in the app, or upload your own video</div>
           </div>
         </section>
@@ -274,7 +276,20 @@ const styles = `
     animation: blink 1.4s ease-in-out infinite;
   }
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
-  .recordIcon { font-size: 40px; margin-bottom: 10px; }
+  .camWrap { display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 6px; }
+  .camImg {
+    max-height: 140px; max-width: 88%; object-fit: contain;
+    filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45));
+    animation: floatCam 4.5s ease-in-out infinite, settleCam 0.7s cubic-bezier(0.2,0.9,0.3,1) both;
+  }
+  @keyframes floatCam {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(-1.2deg); }
+  }
+  @keyframes settleCam {
+    from { opacity: 0; transform: translateY(30px) scale(0.92); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .recordCaption { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
 
   .philosophy { padding-bottom: 10px; }
