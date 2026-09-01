@@ -27,6 +27,11 @@ export default function MyFundraisers() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({}); // campaignId -> bool, show full supporter list
   const [copiedSlug, setCopiedSlug] = useState(null);
+  const [siteHost, setSiteHost] = useState('vidfund.site'); // updated on mount to whatever domain is actually being used
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setSiteHost(window.location.host);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -227,7 +232,7 @@ export default function MyFundraisers() {
             </div>
 
             <div style={styles.linkRow}>
-              <span style={styles.linkText}>vidfund.app/{c.slug}</span>
+              <span style={styles.linkText}>{siteHost}/{c.slug}</span>
               <button style={styles.copyBtn} onClick={() => copyLink(c.slug)}>
                 {copiedSlug === c.slug ? 'Copied!' : 'Copy link'}
               </button>
