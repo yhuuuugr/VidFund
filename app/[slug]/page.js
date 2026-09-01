@@ -15,13 +15,14 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: campaign.title,
       description: `₵${raised.toLocaleString()} raised so far. Help push it further.`,
-      images: campaign.cover_image_url ? [campaign.cover_image_url] : [],
+      images: [campaign.cover_image_url || '/vidfund-og-fallback.png'],
       type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
       title: campaign.title,
       description: `₵${raised.toLocaleString()} raised so far.`,
+      images: [campaign.cover_image_url || '/vidfund-og-fallback.png'],
     },
   };
 }
