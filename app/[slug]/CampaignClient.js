@@ -29,6 +29,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const [reportReason, setReportReason] = useState('');
   const [reportContact, setReportContact] = useState('');
   const [reportStatus, setReportStatus] = useState('idle'); // idle | submitting | done | error
+  const [confirmingDonation, setConfirmingDonation] = useState(false);
+  const [donationError, setDonationError] = useState('');
 
   const suggested = Number(campaign.suggested_amount);
   // Plain preset amounts — not "1x/2x/3x" multipliers, which read as
@@ -149,6 +151,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
         donor_name: donorNote || 'Anonymous',
       },
       callback: function (response) {
+        setConfirmingDonation(true);
+        setDonationError('');
         fetch('/api/donate/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -159,9 +163,21 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
             units: amount / suggested,
             donor_name: donorNote || null,
           }),
-        }).then(() => {
-          window.location.reload();
-        });
+        })
+          .then(async (res) => {
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.error || 'We could not confirm your donation.');
+            }
+            window.location.reload();
+          })
+          .catch((err) => {
+            setConfirmingDonation(false);
+            setDonationError(
+              `Your payment went through, but we couldn't confirm it on our end (ref: ${response.reference}). ` +
+              `Please contact support with this reference — don't pay again. (${err.message})`
+            );
+          });
       },
       onClose: function () {},
     });
@@ -414,8 +430,14 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
               />
             )}
 
-            <button style={styles.donateBtn} onClick={startPayment}>
-              {isCreatorSupport ? `Tip ${firstName} ₵${amount.toFixed(0)}` : `Support ${firstName} with ₵${amount.toFixed(0)}`}
+            {donationError && <p style={styles.donationError}>{donationError}</p>}
+
+            <button style={styles.donateBtn} onClick={startPayment} disabled={confirmingDonation}>
+              {confirmingDonation
+                ? 'Confirming your payment…'
+                : isCreatorSupport
+                ? `Tip ${firstName} ₵${amount.toFixed(0)}`
+                : `Support ${firstName} with ₵${amount.toFixed(0)}`}
             </button>
           </div>
         </div>
@@ -521,5 +543,8 @@ const styles = {
   donateBtn: {
     padding: '15px', borderRadius: 10, border: 'none', background: '#1a7d3c',
     color: '#fff', fontSize: 16.5, fontWeight: 700, cursor: 'pointer', marginTop: 2,
+  },
+  donationError: {
+    color: '#c0392b', fontSize: 13, fontWeight: 600, margin: 0, lineHeight: 1.4,
   },
 };
