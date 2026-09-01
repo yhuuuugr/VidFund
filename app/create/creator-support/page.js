@@ -85,9 +85,20 @@ export default function CreatorSupportPage() {
   const suggested = Number(suggestedAmount) || 0;
 
   function startUpload(file) {
+    // Cancel any upload already in flight so a stale (abandoned) file can never
+    // resolve after a newer one and silently overwrite videoUrl.
+    if (tusUploadRef.current) {
+      try {
+        tusUploadRef.current.abort();
+      } catch (_err) {
+        // ignore — best-effort cancellation of the old upload
+      }
+      tusUploadRef.current = null;
+    }
+
     const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const fileName = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
+    const fileName = `${nanoid()}-${file.name}`.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9._-]/g, '');
 
     setVideoUrl(null);
     setVideoStage('uploading');
@@ -140,6 +151,13 @@ export default function CreatorSupportPage() {
 
     if (file.size > MAX_VIDEO_MB * 1024 * 1024) {
       setError(`That video is too large (${(file.size / 1024 / 1024).toFixed(0)}MB). Keep it under ${MAX_VIDEO_MB}MB.`);
+      setVideoFile(null);
+      e.target.value = '';
+      return;
+    }
+
+    if (!file.type.startsWith('video/')) {
+      setError('That file doesn\'t look like a video. Please choose a video file.');
       setVideoFile(null);
       e.target.value = '';
       return;
