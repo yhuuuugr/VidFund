@@ -17,6 +17,7 @@ export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
   const [isBuffering, setIsBuffering] = useState(true);
+  const [hasError, setHasError] = useState(false);
   // Detected from the video's real dimensions once metadata loads — lets
   // the player adapt to portrait/selfie footage instead of force-cropping
   // it into a fixed 16:9 box.
@@ -113,14 +114,26 @@ export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
         onWaiting={() => setIsBuffering(true)}
         onPlaying={() => setIsBuffering(false)}
         onCanPlay={() => setIsBuffering(false)}
+        onError={() => {
+          setIsBuffering(false);
+          setHasError(true);
+        }}
       />
 
-      {isBuffering && (
+      {isBuffering && !hasError && (
         <div style={styles.bufferingOverlay}>
           <div style={styles.spinner} />
         </div>
       )}
 
+      {hasError && (
+        <div style={styles.errorOverlay}>
+          <span style={styles.errorText}>Video couldn't be played</span>
+        </div>
+      )}
+
+      {!hasError && (
+      <>
       <div style={{ ...styles.controlsOverlay, opacity: showControls ? 1 : 0 }}>
         {/* Center controls: skip-back and play/pause */}
         <div style={styles.centerRow}>
@@ -164,6 +177,8 @@ export default function VideoPlayer({ src, portraitHeight = '48vh' }) {
           🔇 Tap to unmute
         </div>
       )}
+      </>
+      )}
     </div>
   );
 }
@@ -185,6 +200,19 @@ const styles = {
     border: '3px solid rgba(255,255,255,0.35)',
     borderTopColor: '#fff',
     animation: 'vidfund-spin 0.8s linear infinite',
+  },
+  errorOverlay: {
+    position: 'absolute',
+    inset: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#111',
+  },
+  errorText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+    fontWeight: 600,
   },
   wrap: {
     position: 'relative',
