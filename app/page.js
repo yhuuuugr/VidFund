@@ -8,6 +8,28 @@ export default function Home() {
   const amountLineRef = useRef(null);
   const coinGridRef = useRef(null);
   const quoteTextRef = useRef(null);
+  const howSectionRef = useRef(null);
+
+  useEffect(() => {
+    // Reveal the "How it played out" steps every time the section scrolls into view,
+    // and reset when it scrolls out, so it pops in again on the way back too
+    const section = howSectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          section.classList.add('in-view');
+        } else {
+          section.classList.remove('in-view');
+        }
+      },
+      { threshold: 0.15 }
+    );
+    observer.observe(section);
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     // Type out the quote one character at a time, then hold with a blinking cursor
@@ -201,25 +223,25 @@ export default function Home() {
         </section>
 
         {/* Same 3 steps, told as one story instead of dry instructions */}
-        <section className="how">
-          <div className="how-title">How it played out for Ama</div>
-          <p className="how-intro">Her shop flooded and she needed ₵800 to restock. Here's what she did.</p>
+        <section className="how" ref={howSectionRef}>
+          <div className="how-title how-reveal">How it played out for Ama</div>
+          <p className="how-intro how-reveal">Her shop flooded and she needed ₵800 to restock. Here's what she did.</p>
 
-          <div className="how-item">
+          <div className="how-item how-reveal">
             <div className="how-emoji">🎥</div>
             <div>
               <div className="how-step-title">She recorded a 60-second video</div>
               <div className="how-step-text">No script, no editing — just her explaining what happened, right from her phone.</div>
             </div>
           </div>
-          <div className="how-item">
+          <div className="how-item how-reveal">
             <div className="how-emoji">🎯</div>
             <div>
               <div className="how-step-title">She set a goal of ₵800</div>
               <div className="how-step-text">Small and specific — exactly what she needed to reopen, nothing more.</div>
             </div>
           </div>
-          <div className="how-item">
+          <div className="how-item how-reveal">
             <div className="how-emoji">🔗</div>
             <div>
               <div className="how-step-title">She shared her link in a WhatsApp group</div>
@@ -227,7 +249,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="how-outcome">
+          <div className="how-outcome how-reveal">
             Within a week, 340 people had each given a little. <strong>Her shop reopened that Saturday.</strong>
           </div>
         </section>
@@ -400,6 +422,19 @@ const styles = `
   .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 6px; }
   .how-intro { font-size: 15px; color: #444; line-height: 1.5; margin: 0 0 20px; }
   .how-item { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 22px; }
+
+  .how-reveal { opacity: 0; transform: translateY(22px) scale(0.97); }
+  .how.in-view .how-reveal { animation: howPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  .how.in-view .how-title { animation-delay: 0s; }
+  .how.in-view .how-intro { animation-delay: 0.1s; }
+  .how.in-view .how-item:nth-of-type(2) { animation-delay: 0.22s; }
+  .how.in-view .how-item:nth-of-type(3) { animation-delay: 0.38s; }
+  .how.in-view .how-item:nth-of-type(4) { animation-delay: 0.54s; }
+  .how.in-view .how-outcome { animation-delay: 0.7s; }
+  @keyframes howPop {
+    from { opacity: 0; transform: translateY(22px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
   .how-emoji {
     width: 42px; height: 42px; border-radius: 12px; background: #f4f9f4;
     display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
