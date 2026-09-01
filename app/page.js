@@ -7,6 +7,36 @@ export default function Home() {
   const totalRef = useRef(null);
   const amountLineRef = useRef(null);
   const coinGridRef = useRef(null);
+  const quoteTextRef = useRef(null);
+
+  useEffect(() => {
+    // Type out the quote one character at a time, then hold with a blinking cursor
+    const el = quoteTextRef.current;
+    const fullText = 'No one has ever become poor by giving.';
+    if (!el) return;
+
+    el.textContent = '';
+    el.classList.add('typing');
+    let i = 0;
+    let typeInterval;
+
+    const startTimeout = setTimeout(() => {
+      typeInterval = setInterval(() => {
+        i++;
+        el.textContent = fullText.slice(0, i);
+        if (i >= fullText.length) {
+          clearInterval(typeInterval);
+          el.classList.remove('typing');
+          el.classList.add('typed-done');
+        }
+      }, 45);
+    }, 900); // wait for the card to pop in first
+
+    return () => {
+      clearTimeout(startTimeout);
+      clearInterval(typeInterval);
+    };
+  }, []);
 
   useEffect(() => {
     // Build the 30-coin grid, each coin sharing one real coin photo
@@ -124,11 +154,15 @@ export default function Home() {
 
         {/* Hero: speaks directly to the person who needs help, not a generic donor pitch */}
         <section className="hero">
-          <h1>Tell your story.<br /><span className="accent">Get support.</span></h1>
+          <h1>
+            <span className="line line1">Tell your story.</span>
+            <br />
+            <span className="line line2 accent">Get support.</span>
+          </h1>
 
           <div className="quoteCard">
             <span className="quoteMark">"</span>
-            <p className="quoteText">No one has ever become poor by giving.</p>
+            <p className="quoteText" ref={quoteTextRef}></p>
             <p className="quoteAuthor">— Anne Frank</p>
           </div>
 
@@ -242,9 +276,13 @@ const styles = `
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
   .hero { padding: 30px 0 10px; background: radial-gradient(circle at 85% 8%, rgba(242,169,59,0.16), transparent 45%); }
-  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 12px; opacity: 0; animation: fadeUp 0.6s ease-out 0.15s forwards; }
+  h1 { font-family: 'Space Grotesk', sans-serif; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 12px; }
+  h1 .line { display: inline-block; opacity: 0; transform: translateY(28px) scale(0.9); animation: popIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  h1 .line1 { animation-delay: 0.15s; }
+  h1 .line2 { animation-delay: 0.42s; }
+  @keyframes popIn { 0% { opacity: 0; transform: translateY(28px) scale(0.9); } 60% { opacity: 1; transform: translateY(-4px) scale(1.03); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
   h1 .accent { position: relative; white-space: nowrap; }
-  h1 .accent::after { content: ''; position: absolute; left: -2px; right: -2px; bottom: 2px; height: 12px; background: var(--gold); z-index: -1; opacity: 0; transform: scaleX(0); transform-origin: left; animation: swipe 0.5s ease-out 0.7s forwards; }
+  h1 .accent::after { content: ''; position: absolute; left: -2px; right: -2px; bottom: 2px; height: 12px; background: var(--gold); z-index: -1; opacity: 0; transform: scaleX(0); transform-origin: left; animation: swipe 0.5s ease-out 0.9s forwards; }
   @keyframes swipe { to { opacity: 0.55; transform: scaleX(1); } }
   .sub { font-size: 16px; line-height: 1.5; color: #3a3a3a; max-width: 320px; margin: 0 0 20px; opacity: 0; animation: fadeUp 0.6s ease-out 0.28s forwards; }
 
@@ -352,7 +390,10 @@ const styles = `
     animation: fadeUp 0.6s ease-out 0.2s forwards;
   }
   .quoteMark { font-family: 'Space Grotesk', sans-serif; font-size: 56px; color: var(--gold); line-height: 0.4; display: block; margin-bottom: 8px; }
-  .quoteText { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; font-style: italic; color: var(--green); line-height: 1.35; margin: 0 0 8px; }
+  .quoteText { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; font-style: italic; color: var(--green); line-height: 1.35; margin: 0 0 8px; min-height: 1.35em; }
+  .quoteText.typing::after { content: ''; display: inline-block; width: 2px; height: 1em; background: var(--green); margin-left: 2px; vertical-align: -2px; animation: cursorBlink 0.8s step-end infinite; }
+  .quoteText.typed-done::after { content: ''; display: inline-block; width: 2px; height: 1em; background: var(--green); margin-left: 2px; vertical-align: -2px; animation: cursorBlink 0.8s step-end infinite; opacity: 0.5; }
+  @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
   .quoteAuthor { font-size: 13px; color: #8a6a2a; font-weight: 600; margin: 0; }
 
   .how { padding: 30px 0 10px; }
