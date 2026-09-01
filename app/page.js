@@ -290,11 +290,9 @@ const styles = `
     background-position: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
     transform-style: preserve-3d;
-    opacity: 0;
-    transform: scale(0.4);
-    animation: settle 0.4s ease-out forwards;
+    animation: settle 0.4s ease-out both;
   }
-  @keyframes settle { to { opacity: 1; transform: scale(1); } }
+  @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
   .coin.flip { animation: flip 1.1s ease-in-out; }
   @keyframes flip {
     0%   { transform: rotateY(0deg) scale(1); }
