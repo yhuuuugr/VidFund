@@ -135,7 +135,10 @@ export default function Home() {
           <p className="sub">Need help with something? Record your story and share it with people who care. ❤️</p>
 
           <div className="cta-wrap">
-            <Link href="/create" className="cta">🎥 Start your fundraiser</Link>
+            <Link href="/create" className="cta">
+              <span className="ctaCamWrap"><img className="ctaCamImg" src="/record-camera.png" alt="" /></span>
+              Start your fundraiser
+            </Link>
           </div>
           <p className="reassure">Takes a few minutes. No long forms. Just your story.</p>
 
@@ -247,7 +250,8 @@ const styles = `
 
   .cta-wrap { opacity: 0; animation: fadeUp 0.6s ease-out 0.4s forwards; }
   .cta {
-    display: block; text-align: center; width: 100%; box-sizing: border-box;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    text-align: center; width: 100%; box-sizing: border-box;
     background: var(--terracotta); color: #fff; font-family: 'Inter', sans-serif;
     font-weight: 700; font-size: 17px; padding: 17px 20px; border-radius: 12px;
     text-decoration: none; box-shadow: 0 6px 0 #a5341f;
@@ -256,6 +260,17 @@ const styles = `
   }
   .cta:active { transform: translateY(4px); box-shadow: 0 2px 0 #a5341f; }
   @keyframes pulse { 0%, 100% { box-shadow: 0 6px 0 #a5341f, 0 0 0 0 rgba(214,73,51,0.35); } 50% { box-shadow: 0 6px 0 #a5341f, 0 0 0 8px rgba(214,73,51,0); } }
+
+  .ctaCamWrap { display: inline-flex; perspective: 300px; flex-shrink: 0; }
+  .ctaCamImg {
+    height: 26px; width: auto; object-fit: contain;
+    animation: turnAroundSmall 5s linear infinite;
+    transform-style: preserve-3d;
+  }
+  @keyframes turnAroundSmall {
+    0%   { transform: rotateY(0deg); }
+    100% { transform: rotateY(360deg); }
+  }
 
   .reassure { font-size: 13px; color: #888; text-align: center; margin: 10px 0 24px; opacity: 0; animation: fadeUp 0.6s ease-out 0.5s forwards; }
 
