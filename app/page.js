@@ -5,33 +5,110 @@ import Link from 'next/link';
 
 export default function Home() {
   const totalRef = useRef(null);
+  const amountLineRef = useRef(null);
   const coinGridRef = useRef(null);
 
   useEffect(() => {
+    // Build the 30-coin grid, each coin sharing one real coin photo
     const grid = coinGridRef.current;
+    const coins = [];
     if (grid) {
       grid.innerHTML = '';
       for (let i = 0; i < 30; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'coin-cell';
         const coin = document.createElement('div');
         coin.className = 'coin';
-        coin.style.animationDelay = `${i * 0.025}s, ${2 + Math.random() * 2}s`;
-        grid.appendChild(coin);
+        coin.style.animationDelay = `${i * 0.02}s`;
+        cell.appendChild(coin);
+        grid.appendChild(cell);
+        coins.push(coin);
       }
     }
 
-    const totalEl = totalRef.current;
-    let start = null;
-    const target = 8000;
-    function countUp(ts) {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / 1200, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const val = Math.floor(eased * target);
-      if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
-      if (progress < 1) requestAnimationFrame(countUp);
+    // Randomly flip a few coins at a time, forever, so the card feels alive
+    function flipRandomCoins() {
+      const howMany = 2 + Math.floor(Math.random() * 3); // 2-4 coins
+      const chosen = new Set();
+      while (chosen.size < howMany && chosen.size < coins.length) {
+        chosen.add(Math.floor(Math.random() * coins.length));
+      }
+      chosen.forEach((idx) => {
+        const c = coins[idx];
+        c.classList.remove('flip');
+        void c.offsetWidth; // restart animation
+        c.classList.add('flip');
+      });
     }
-    const timer = setTimeout(() => requestAnimationFrame(countUp), 800);
-    return () => clearTimeout(timer);
+    const flipInterval = setInterval(flipRandomCoins, 1400);
+    const flipTimeout = setTimeout(flipRandomCoins, 900);
+
+    // Cycle through many different, real ways to reach the same ₵8,000 goal.
+    // Each pair multiplies out to exactly 8000; picked at random each time
+    // (never repeating the same one twice in a row) so it feels like it's
+    // actively recalculating rather than replaying a fixed loop.
+    const combos = [
+      { amount: 5, people: 1600 },
+      { amount: 2, people: 4000 },
+      { amount: 10, people: 800 },
+      { amount: 1, people: 8000 },
+      { amount: 20, people: 400 },
+      { amount: 8, people: 1000 },
+      { amount: 25, people: 320 },
+      { amount: 40, people: 200 },
+      { amount: 50, people: 160 },
+      { amount: 16, people: 500 },
+      { amount: 100, people: 80 },
+      { amount: 80, people: 100 },
+      { amount: 200, people: 40 },
+      { amount: 250, people: 32 },
+      { amount: 400, people: 20 },
+    ];
+    const TARGET = 8000;
+    const totalEl = totalRef.current;
+    const amountLineEl = amountLineRef.current;
+    let lastIndex = 0;
+
+    function pickNextCombo() {
+      let idx;
+      do {
+        idx = Math.floor(Math.random() * combos.length);
+      } while (idx === lastIndex);
+      lastIndex = idx;
+      return combos[idx];
+    }
+
+    function renderCombo(combo) {
+      if (!amountLineEl) return;
+      amountLineEl.innerHTML = `<span class="fade">You can get ₵${combo.amount} from ${combo.people.toLocaleString()} people</span>`;
+    }
+
+    function countUpTotal() {
+      let start = null;
+      function step(ts) {
+        if (!start) start = ts;
+        const progress = Math.min((ts - start) / 900, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const val = Math.floor(eased * TARGET);
+        if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
+        if (progress < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    renderCombo(combos[0]);
+    const firstCountTimeout = setTimeout(countUpTotal, 700);
+    const comboInterval = setInterval(() => {
+      renderCombo(pickNextCombo());
+      countUpTotal();
+    }, 3200);
+
+    return () => {
+      clearInterval(flipInterval);
+      clearTimeout(flipTimeout);
+      clearTimeout(firstCountTimeout);
+      clearInterval(comboInterval);
+    };
   }, []);
 
   return (
@@ -76,7 +153,9 @@ export default function Home() {
             <div className="tally-label">You don't need one person to give ₵8,000</div>
             <div className="coin-grid" ref={coinGridRef} />
             <div className="tally-sum">
-              <span>You can get ₵5 from 1,600 people</span>
+              <span className="amount-line" ref={amountLineRef}>
+                <span className="fade">You can get ₵5 from 1,600 people</span>
+              </span>
               <span className="total" ref={totalRef}>= ₵0</span>
             </div>
           </div>
@@ -201,11 +280,29 @@ const styles = `
   .philosophy { padding-bottom: 10px; }
   .tally { background: var(--green); border-radius: 18px; padding: 22px 20px 20px; color: #fff; position: relative; overflow: hidden; }
   .tally-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 12px; font-weight: 600; line-height: 1.4; }
-  .coin-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-bottom: 16px; }
-  .coin { aspect-ratio: 1; border-radius: 50%; background: var(--gold); opacity: 0; transform: scale(0.3); animation: pop 0.35s ease-out forwards, glint 3s ease-in-out infinite; }
-  @keyframes pop { to { opacity: 1; transform: scale(1); } }
-  @keyframes glint { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.25); } }
+  .coin-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; margin-bottom: 16px; perspective: 400px; }
+  .coin-cell { aspect-ratio: 1; }
+  .coin {
+    width: 100%; height: 100%;
+    border-radius: 50%;
+    background-image: url('/coin.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
+    transform-style: preserve-3d;
+    animation: settle 0.4s ease-out both;
+  }
+  @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
+  .coin.flip { animation: flip 1.1s ease-in-out; }
+  @keyframes flip {
+    0%   { transform: rotateY(0deg) scale(1); }
+    45%  { transform: rotateY(180deg) scale(1.08); filter: brightness(1.25); }
+    100% { transform: rotateY(360deg) scale(1); filter: brightness(1); }
+  }
   .tally-sum { font-family: 'IBM Plex Mono', monospace; font-size: 13.5px; color: rgba(255,255,255,0.9); border-top: 1px solid rgba(255,255,255,0.15); padding-top: 14px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .tally-sum .amount-line { position: relative; display: inline-block; }
+  .tally-sum .amount-line .fade { display: inline-block; animation: swapText 0.4s ease-out both; }
+  @keyframes swapText { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
   .tally-sum .total { font-size: 20px; font-weight: 600; color: var(--gold); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
   .quoteCard {
