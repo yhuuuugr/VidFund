@@ -117,13 +117,13 @@ export default function CreateCampaign() {
   const [thumbnailError, setThumbnailError] = useState('');
   const thumbnailPromiseRef = useRef(null);
 
-  // Grabs a frame ~1s into the video (or the midpoint, if it's shorter than
-  // that) using a <video> + <canvas>, and returns it as a JPEG Blob.
+  // Grabs a frame from the video using a <video> + <canvas>, and returns it
+  // as a JPEG Blob.
   //
   // Mobile Safari and Chrome will often refuse to decode a frame (readyState
-  // never advances, 'seeked' never fires) if the <video> element is fully
-  // detached from the page — it has to actually be in the DOM, even if
-  // invisible, for them to treat it as a "real" video worth decoding.
+  // never advances) if the <video> element is fully detached from the page —
+  // it has to actually be in the DOM, even if invisible, for them to treat
+  // it as a "real" video worth decoding.
   function captureVideoFrame(file) {
     return new Promise((resolve, reject) => {
       const videoEl = document.createElement('video');
@@ -132,12 +132,14 @@ export default function CreateCampaign() {
       videoEl.playsInline = true;
       videoEl.setAttribute('webkit-playsinline', 'true'); // older iOS Safari
       videoEl.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(videoEl);
 
       const objectUrl = URL.createObjectURL(file);
       videoEl.src = objectUrl;
-      document.body.appendChild(videoEl);
+      videoEl.load();
 
       let settled = false;
+      let drawn = false;
       const cleanup = () => {
         URL.revokeObjectURL(objectUrl);
         videoEl.remove();
@@ -155,10 +157,11 @@ export default function CreateCampaign() {
         blob ? resolve(blob) : reject(new Error('Could not encode captured frame'));
       };
 
-      // Some mobile browsers fire 'seeked' before the frame is actually
-      // painted to the video element — waiting a frame via
-      // requestAnimationFrame before drawing avoids grabbing a blank canvas.
+      // Draws whatever frame is currently loaded. Guarded so it only ever
+      // runs once, since it can be triggered from more than one path below.
       const drawFrame = () => {
+        if (drawn || settled) return;
+        drawn = true;
         requestAnimationFrame(() => {
           try {
             const canvas = document.createElement('canvas');
@@ -172,20 +175,34 @@ export default function CreateCampaign() {
         });
       };
 
-      const seekToFrame = () => {
+      // 'loadeddata' guarantees at least one frame (at time 0) is
+      // decodable — that's our reliable fallback. We *try* to nudge the
+      // playhead forward first for a nicer non-blank-first-frame thumbnail,
+      // but some mobile browsers never fire 'seeked' if the seek doesn't
+      // behave the way desktop browsers expect — previously that made
+      // capture hang until the 8s timeout. Now it just falls back to the
+      // frame-0 capture after a short 700ms grace period instead of
+      // depending on 'seeked' ever firing.
+      videoEl.addEventListener('loadeddata', () => {
         try {
-          videoEl.currentTime = Math.min(1, (videoEl.duration || 0) / 2 || 0);
-        } catch (err) {
-          fail(err);
+          const duration = videoEl.duration;
+          const target = Number.isFinite(duration) ? Math.min(1, duration / 2) : 0;
+          if (target > 0) {
+            videoEl.addEventListener('seeked', drawFrame, { once: true });
+            videoEl.currentTime = target;
+            setTimeout(drawFrame, 700);
+          } else {
+            drawFrame();
+          }
+        } catch {
+          drawFrame();
         }
-      };
+      }, { once: true });
 
-      videoEl.addEventListener('loadedmetadata', seekToFrame, { once: true });
-      videoEl.addEventListener('seeked', drawFrame, { once: true });
       videoEl.addEventListener('error', () => fail(new Error('Could not read video for thumbnail')), { once: true });
 
-      // Safety net: if metadata/seek events never fire (seen on some mobile
-      // browsers with certain codecs), give up after 8s instead of hanging.
+      // Safety net: if nothing above ever fires (rare codec issue), give up
+      // after 8s instead of hanging.
       setTimeout(() => fail(new Error('Thumbnail capture timed out')), 8000);
     });
   }
