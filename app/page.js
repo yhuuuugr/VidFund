@@ -267,21 +267,21 @@ export default function Home() {
           <p className="how-intro how-reveal">Her shop flooded and she needed ₵800 to restock. Here's what she did.</p>
 
           <div className="how-item how-reveal">
-            <div className="how-emoji">🎥</div>
+            <div className="how-emoji"><img src="/record-camera.png" alt="" className="how-icon-img" /></div>
             <div>
               <div className="how-step-title">She recorded a 60-second video</div>
               <div className="how-step-text">No script, no editing — just her explaining what happened, right from her phone.</div>
             </div>
           </div>
           <div className="how-item how-reveal">
-            <div className="how-emoji">🎯</div>
+            <div className="how-emoji"><img src="/how-target.png" alt="" className="how-icon-img" /></div>
             <div>
               <div className="how-step-title">She set a goal of ₵800</div>
               <div className="how-step-text">Small and specific — exactly what she needed to reopen, nothing more.</div>
             </div>
           </div>
           <div className="how-item how-reveal">
-            <div className="how-emoji">🔗</div>
+            <div className="how-emoji"><img src="/how-link.png" alt="" className="how-icon-img" /></div>
             <div>
               <div className="how-step-title">She shared her link in a WhatsApp group</div>
               <div className="how-step-text">Family, friends, and their friends — passed along from person to person.</div>
@@ -482,7 +482,9 @@ const styles = `
   .how-emoji {
     width: 42px; height: 42px; border-radius: 12px; background: #f4f9f4;
     display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
+    overflow: hidden;
   }
+  .how-icon-img { width: 78%; height: 78%; object-fit: contain; }
   .how-step-title { font-size: 15.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
   .how-step-text { font-size: 14px; color: #555; line-height: 1.45; }
   .how-outcome {
