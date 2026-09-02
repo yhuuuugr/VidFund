@@ -8,7 +8,75 @@ export default function Home() {
   const amountLineRef = useRef(null);
   const coinGridRef = useRef(null);
   const quoteTextRef = useRef(null);
+  const quoteAuthorRef = useRef(null);
+  const heroRef = useRef(null);
   const howSectionRef = useRef(null);
+
+  const quotesRef = useRef([
+    { text: 'No one has ever become poor by giving.', author: 'Anne Frank' },
+    { text: 'We rise by lifting others.', author: 'Robert Ingersoll' },
+    { text: 'No act of kindness, no matter how small, is ever wasted.', author: 'Aesop' },
+    { text: 'Alone we can do so little; together we can do so much.', author: 'Helen Keller' },
+  ]);
+  const quoteIndexRef = useRef(0);
+  const quoteTimersRef = useRef({ timeout: null, interval: null });
+
+  useEffect(() => {
+    // Hero pops in (and resets) every time it scrolls into/out of view,
+    // and each time it comes into view, the quote retypes — cycling to the next one
+    const hero = heroRef.current;
+    const textEl = quoteTextRef.current;
+    const authorEl = quoteAuthorRef.current;
+    if (!hero || !textEl) return;
+
+    const clearTimers = () => {
+      clearTimeout(quoteTimersRef.current.timeout);
+      clearInterval(quoteTimersRef.current.interval);
+    };
+
+    const playQuote = () => {
+      clearTimers();
+      const quotes = quotesRef.current;
+      const q = quotes[quoteIndexRef.current % quotes.length];
+      quoteIndexRef.current += 1;
+
+      textEl.textContent = '';
+      textEl.classList.remove('typed-done');
+      textEl.classList.add('typing');
+      if (authorEl) authorEl.textContent = `— ${q.author}`;
+
+      let i = 0;
+      quoteTimersRef.current.timeout = setTimeout(() => {
+        quoteTimersRef.current.interval = setInterval(() => {
+          i++;
+          textEl.textContent = q.text.slice(0, i);
+          if (i >= q.text.length) {
+            clearInterval(quoteTimersRef.current.interval);
+            textEl.classList.remove('typing');
+            textEl.classList.add('typed-done');
+          }
+        }, 45);
+      }, 350);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          hero.classList.add('in-view');
+          playQuote();
+        } else {
+          hero.classList.remove('in-view');
+        }
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(hero);
+
+    return () => {
+      observer.disconnect();
+      clearTimers();
+    };
+  }, []);
 
   useEffect(() => {
     // Reveal the "How it played out" steps every time the section scrolls into view,
@@ -29,35 +97,6 @@ export default function Home() {
     observer.observe(section);
 
     return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    // Type out the quote one character at a time, then hold with a blinking cursor
-    const el = quoteTextRef.current;
-    const fullText = 'No one has ever become poor by giving.';
-    if (!el) return;
-
-    el.textContent = '';
-    el.classList.add('typing');
-    let i = 0;
-    let typeInterval;
-
-    const startTimeout = setTimeout(() => {
-      typeInterval = setInterval(() => {
-        i++;
-        el.textContent = fullText.slice(0, i);
-        if (i >= fullText.length) {
-          clearInterval(typeInterval);
-          el.classList.remove('typing');
-          el.classList.add('typed-done');
-        }
-      }, 45);
-    }, 900); // wait for the card to pop in first
-
-    return () => {
-      clearTimeout(startTimeout);
-      clearInterval(typeInterval);
-    };
   }, []);
 
   useEffect(() => {
@@ -175,7 +214,7 @@ export default function Home() {
         </header>
 
         {/* Hero: speaks directly to the person who needs help, not a generic donor pitch */}
-        <section className="hero">
+        <section className="hero" ref={heroRef}>
           <h1>
             <span className="line line1">Tell your story.</span>
             <br />
@@ -185,7 +224,7 @@ export default function Home() {
           <div className="quoteCard">
             <span className="quoteMark">"</span>
             <p className="quoteText" ref={quoteTextRef}></p>
-            <p className="quoteAuthor">— Anne Frank</p>
+            <p className="quoteAuthor" ref={quoteAuthorRef}>— Anne Frank</p>
           </div>
 
           <p className="sub">Need help with something? Record your story and share it with people who care. ❤️</p>
@@ -299,16 +338,20 @@ const styles = `
 
   .hero { padding: 30px 0 10px; background: radial-gradient(circle at 85% 8%, rgba(242,169,59,0.16), transparent 45%); }
   h1 { font-family: 'Space Grotesk', sans-serif; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 12px; }
-  h1 .line { display: inline-block; opacity: 0; transform: translateY(28px) scale(0.9); animation: popIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-  h1 .line1 { animation-delay: 0.15s; }
-  h1 .line2 { animation-delay: 0.42s; }
+  h1 .line { display: inline-block; opacity: 0; transform: translateY(28px) scale(0.9); }
+  .hero.in-view h1 .line { animation: popIn 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  .hero.in-view h1 .line1 { animation-delay: 0.15s; }
+  .hero.in-view h1 .line2 { animation-delay: 0.42s; }
   @keyframes popIn { 0% { opacity: 0; transform: translateY(28px) scale(0.9); } 60% { opacity: 1; transform: translateY(-4px) scale(1.03); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
   h1 .accent { position: relative; white-space: nowrap; }
-  h1 .accent::after { content: ''; position: absolute; left: -2px; right: -2px; bottom: 2px; height: 12px; background: var(--gold); z-index: -1; opacity: 0; transform: scaleX(0); transform-origin: left; animation: swipe 0.5s ease-out 0.9s forwards; }
+  h1 .accent::after { content: ''; position: absolute; left: -2px; right: -2px; bottom: 2px; height: 12px; background: var(--gold); z-index: -1; opacity: 0; transform: scaleX(0); transform-origin: left; }
+  .hero.in-view h1 .accent::after { animation: swipe 0.5s ease-out 0.9s forwards; }
   @keyframes swipe { to { opacity: 0.55; transform: scaleX(1); } }
-  .sub { font-size: 16px; line-height: 1.5; color: #3a3a3a; max-width: 320px; margin: 0 0 20px; opacity: 0; animation: fadeUp 0.6s ease-out 0.28s forwards; }
+  .sub { font-size: 16px; line-height: 1.5; color: #3a3a3a; max-width: 320px; margin: 0 0 20px; opacity: 0; }
+  .hero.in-view .sub { animation: fadeUp 0.6s ease-out 0.28s forwards; }
 
-  .cta-wrap { opacity: 0; animation: fadeUp 0.6s ease-out 0.4s forwards; }
+  .cta-wrap { opacity: 0; }
+  .hero.in-view .cta-wrap { animation: fadeUp 0.6s ease-out 0.4s forwards; }
   .cta {
     display: flex; align-items: center; justify-content: center; gap: 8px;
     text-align: center; width: 100%; box-sizing: border-box;
@@ -332,7 +375,8 @@ const styles = `
     100% { transform: rotateY(360deg); }
   }
 
-  .reassure { font-size: 13px; color: #888; text-align: center; margin: 10px 0 24px; opacity: 0; animation: fadeUp 0.6s ease-out 0.5s forwards; }
+  .reassure { font-size: 13px; color: #888; text-align: center; margin: 10px 0 24px; opacity: 0; }
+  .hero.in-view .reassure { animation: fadeUp 0.6s ease-out 0.5s forwards; }
 
   .recordCard {
     position: relative;
@@ -409,8 +453,8 @@ const styles = `
     border-radius: 16px;
     border: 1px solid rgba(242,169,59,0.3);
     opacity: 0;
-    animation: fadeUp 0.6s ease-out 0.2s forwards;
   }
+  .hero.in-view .quoteCard { animation: fadeUp 0.6s ease-out 0.2s forwards; }
   .quoteMark { font-family: 'Space Grotesk', sans-serif; font-size: 56px; color: var(--gold); line-height: 0.4; display: block; margin-bottom: 8px; }
   .quoteText { font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; font-style: italic; color: var(--green); line-height: 1.35; margin: 0 0 8px; min-height: 1.35em; }
   .quoteText.typing::after { content: ''; display: inline-block; width: 2px; height: 1em; background: var(--green); margin-left: 2px; vertical-align: -2px; animation: cursorBlink 0.8s step-end infinite; }
