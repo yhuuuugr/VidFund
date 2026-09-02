@@ -113,43 +113,79 @@ export default function CreateCampaign() {
   // they show a static image, so a real frame from the creator's own video
   // makes a far more compelling preview than a generic placeholder graphic.
   const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const [thumbnailStatus, setThumbnailStatus] = useState('idle'); // idle | capturing | done | failed
   const thumbnailPromiseRef = useRef(null);
 
   // Grabs a frame ~1s into the video (or the midpoint, if it's shorter than
-  // that) using an off-DOM <video> + <canvas>, and returns it as a JPEG Blob.
+  // that) using a <video> + <canvas>, and returns it as a JPEG Blob.
+  //
+  // Mobile Safari and Chrome will often refuse to decode a frame (readyState
+  // never advances, 'seeked' never fires) if the <video> element is fully
+  // detached from the page — it has to actually be in the DOM, even if
+  // invisible, for them to treat it as a "real" video worth decoding.
   function captureVideoFrame(file) {
     return new Promise((resolve, reject) => {
       const videoEl = document.createElement('video');
-      videoEl.preload = 'metadata';
+      videoEl.preload = 'auto';
       videoEl.muted = true;
       videoEl.playsInline = true;
+      videoEl.setAttribute('webkit-playsinline', 'true'); // older iOS Safari
+      videoEl.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+
       const objectUrl = URL.createObjectURL(file);
       videoEl.src = objectUrl;
+      document.body.appendChild(videoEl);
 
-      const cleanup = () => URL.revokeObjectURL(objectUrl);
-
-      videoEl.onloadedmetadata = () => {
-        videoEl.currentTime = Math.min(1, videoEl.duration / 2 || 0);
+      let settled = false;
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
+        videoEl.remove();
       };
-      videoEl.onseeked = () => {
+      const fail = (err) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+      const succeed = (blob) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        blob ? resolve(blob) : reject(new Error('Could not encode captured frame'));
+      };
+
+      // Some mobile browsers fire 'seeked' before the frame is actually
+      // painted to the video element — waiting a frame via
+      // requestAnimationFrame before drawing avoids grabbing a blank canvas.
+      const drawFrame = () => {
+        requestAnimationFrame(() => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 720;
+            canvas.height = videoEl.videoHeight || 1280;
+            canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(succeed, 'image/jpeg', 0.85);
+          } catch (err) {
+            fail(err);
+          }
+        });
+      };
+
+      const seekToFrame = () => {
         try {
-          const canvas = document.createElement('canvas');
-          canvas.width = videoEl.videoWidth;
-          canvas.height = videoEl.videoHeight;
-          canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
-          canvas.toBlob((blob) => {
-            cleanup();
-            blob ? resolve(blob) : reject(new Error('Could not capture frame'));
-          }, 'image/jpeg', 0.85);
+          videoEl.currentTime = Math.min(1, (videoEl.duration || 0) / 2 || 0);
         } catch (err) {
-          cleanup();
-          reject(err);
+          fail(err);
         }
       };
-      videoEl.onerror = () => {
-        cleanup();
-        reject(new Error('Could not read video for thumbnail'));
-      };
+
+      videoEl.addEventListener('loadedmetadata', seekToFrame, { once: true });
+      videoEl.addEventListener('seeked', drawFrame, { once: true });
+      videoEl.addEventListener('error', () => fail(new Error('Could not read video for thumbnail')), { once: true });
+
+      // Safety net: if metadata/seek events never fire (seen on some mobile
+      // browsers with certain codecs), give up after 8s instead of hanging.
+      setTimeout(() => fail(new Error('Thumbnail capture timed out')), 8000);
     });
   }
 
@@ -158,6 +194,7 @@ export default function CreateCampaign() {
   // blocks publishing on it — failure or a slow capture just means the
   // share preview falls back to the generic image instead of a real frame.
   async function captureAndUploadThumbnail(file, fileNameBase) {
+    setThumbnailStatus('capturing');
     const promise = (async () => {
       const blob = await captureVideoFrame(file);
       const path = `thumbs/${fileNameBase}.jpg`;
@@ -169,9 +206,11 @@ export default function CreateCampaign() {
       const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${path}`;
       setCoverImageUrl(publicUrl);
+      setThumbnailStatus('done');
       return publicUrl;
     })().catch((err) => {
       console.error('Thumbnail capture failed (non-fatal):', err.message);
+      setThumbnailStatus('failed');
       return null;
     });
 
@@ -495,6 +534,17 @@ export default function CreateCampaign() {
                 <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%`, background: '#c0392b' }} />
               </div>
             )}
+            {thumbnailStatus === 'capturing' && (
+              <div style={styles.thumbStatus}>Capturing a cover image from your video…</div>
+            )}
+            {thumbnailStatus === 'done' && (
+              <div style={{ ...styles.thumbStatus, color: '#2e7d32' }}>✓ Cover image captured</div>
+            )}
+            {thumbnailStatus === 'failed' && (
+              <div style={{ ...styles.thumbStatus, color: '#c0392b' }}>
+                Couldn't auto-capture a cover image — your link preview will use the default VidFund image instead. This doesn't affect publishing.
+              </div>
+            )}
           </div>
         )}
 
@@ -627,6 +677,7 @@ const styles = {
     flexShrink: 0,
   }),
   uploadingLabel: { fontSize: 12.5, color: '#b5750a', fontWeight: 600 },
+  thumbStatus: { fontSize: 12.5, color: '#777', fontWeight: 500, marginTop: 8 },
   retryBtn: {
     fontSize: 12.5,
     fontWeight: 700,
