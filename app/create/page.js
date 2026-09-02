@@ -114,6 +114,7 @@ export default function CreateCampaign() {
   // makes a far more compelling preview than a generic placeholder graphic.
   const [coverImageUrl, setCoverImageUrl] = useState(null);
   const [thumbnailStatus, setThumbnailStatus] = useState('idle'); // idle | capturing | done | failed
+  const [thumbnailError, setThumbnailError] = useState('');
   const thumbnailPromiseRef = useRef(null);
 
   // Grabs a frame ~1s into the video (or the midpoint, if it's shorter than
@@ -195,6 +196,7 @@ export default function CreateCampaign() {
   // share preview falls back to the generic image instead of a real frame.
   async function captureAndUploadThumbnail(file, fileNameBase) {
     setThumbnailStatus('capturing');
+    setThumbnailError('');
     const promise = (async () => {
       const blob = await captureVideoFrame(file);
       const path = `thumbs/${fileNameBase}.jpg`;
@@ -211,6 +213,7 @@ export default function CreateCampaign() {
     })().catch((err) => {
       console.error('Thumbnail capture failed (non-fatal):', err.message);
       setThumbnailStatus('failed');
+      setThumbnailError(err.message || String(err));
       return null;
     });
 
@@ -543,6 +546,7 @@ export default function CreateCampaign() {
             {thumbnailStatus === 'failed' && (
               <div style={{ ...styles.thumbStatus, color: '#c0392b' }}>
                 Couldn't auto-capture a cover image — your link preview will use the default VidFund image instead. This doesn't affect publishing.
+                {thumbnailError && <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 11, opacity: 0.85 }}>Error: {thumbnailError}</div>}
               </div>
             )}
           </div>
