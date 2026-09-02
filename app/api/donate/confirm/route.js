@@ -30,14 +30,18 @@ export async function POST(req) {
 
   const amountGHS = verifyData.data.amount / 100;
 
-  const { data: campaign } = await supabaseAdmin
+  const { data: campaign, error: campaignError } = await supabaseAdmin
     .from('campaigns')
     .select('suggested_amount')
     .eq('id', campaign_id)
     .single();
 
-  if (!campaign) {
-    return NextResponse.json({ error: 'Campaign not found' }, { status: 404 });
+  if (campaignError || !campaign) {
+    console.error('donate/confirm: campaign lookup failed', { campaign_id, campaignError });
+    return NextResponse.json(
+      { error: campaignError ? `Campaign lookup failed: ${campaignError.message}` : 'Campaign not found' },
+      { status: 404 }
+    );
   }
 
   const units = amountGHS / Number(campaign.suggested_amount);

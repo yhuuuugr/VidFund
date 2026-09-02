@@ -122,7 +122,9 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
 
   // Count this page load as a view — powers the creator dashboard.
   useEffect(() => {
-    supabase.rpc('increment_campaign_view', { campaign_slug: campaign.slug });
+    supabase.rpc('increment_campaign_view', { campaign_slug: campaign.slug }).then(({ error }) => {
+      if (error) console.error('increment_campaign_view failed:', error.message);
+    });
   }, [campaign.slug]);
 
   async function loadRecentDonations() {
