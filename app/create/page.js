@@ -106,6 +106,79 @@ export default function CreateCampaign() {
   const tusUploadRef = useRef(null); // the in-progress/resumable tus.Upload instance
   const uploadCallbacksRef = useRef({ resolve: null, reject: null }); // rebindable per attempt
 
+  // A frame grabbed from the video the moment it's selected, uploaded
+  // separately (small, non-resumable) and saved as cover_image_url. This is
+  // what shows up as the thumbnail when the campaign link is shared on
+  // WhatsApp/Facebook/iMessage — those platforms don't play video inline,
+  // they show a static image, so a real frame from the creator's own video
+  // makes a far more compelling preview than a generic placeholder graphic.
+  const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const thumbnailPromiseRef = useRef(null);
+
+  // Grabs a frame ~1s into the video (or the midpoint, if it's shorter than
+  // that) using an off-DOM <video> + <canvas>, and returns it as a JPEG Blob.
+  function captureVideoFrame(file) {
+    return new Promise((resolve, reject) => {
+      const videoEl = document.createElement('video');
+      videoEl.preload = 'metadata';
+      videoEl.muted = true;
+      videoEl.playsInline = true;
+      const objectUrl = URL.createObjectURL(file);
+      videoEl.src = objectUrl;
+
+      const cleanup = () => URL.revokeObjectURL(objectUrl);
+
+      videoEl.onloadedmetadata = () => {
+        videoEl.currentTime = Math.min(1, videoEl.duration / 2 || 0);
+      };
+      videoEl.onseeked = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = videoEl.videoWidth;
+          canvas.height = videoEl.videoHeight;
+          canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            cleanup();
+            blob ? resolve(blob) : reject(new Error('Could not capture frame'));
+          }, 'image/jpeg', 0.85);
+        } catch (err) {
+          cleanup();
+          reject(err);
+        }
+      };
+      videoEl.onerror = () => {
+        cleanup();
+        reject(new Error('Could not read video for thumbnail'));
+      };
+    });
+  }
+
+  // Runs in the background alongside the video upload. handleSubmit gives
+  // it a short window to finish (see thumbnailPromiseRef below) but never
+  // blocks publishing on it — failure or a slow capture just means the
+  // share preview falls back to the generic image instead of a real frame.
+  async function captureAndUploadThumbnail(file, fileNameBase) {
+    const promise = (async () => {
+      const blob = await captureVideoFrame(file);
+      const path = `thumbs/${fileNameBase}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('campaign-videos')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${path}`;
+      setCoverImageUrl(publicUrl);
+      return publicUrl;
+    })().catch((err) => {
+      console.error('Thumbnail capture failed (non-fatal):', err.message);
+      return null;
+    });
+
+    thumbnailPromiseRef.current = promise;
+    return promise;
+  }
+
   const [stage, setStage] = useState('idle'); // idle | waiting-for-video | publishing
   const [error, setError] = useState('');
 
@@ -185,7 +258,10 @@ export default function CreateCampaign() {
     }
 
     setVideoFile(file);
+    setCoverImageUrl(null);
+    const fileNameBase = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
     startUpload(file);
+    captureAndUploadThumbnail(file, fileNameBase);
   }
 
   function handleRetryUpload() {
@@ -222,6 +298,16 @@ export default function CreateCampaign() {
         return;
       }
 
+      // By the time the video upload finishes, the thumbnail (a small
+      // local canvas capture + one small upload) has almost always
+      // finished too. Give it up to 3s to catch up if not — worth the
+      // wait for a real preview image instead of the generic fallback.
+      let finalCoverImageUrl = coverImageUrl;
+      if (thumbnailPromiseRef.current && !finalCoverImageUrl) {
+        const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+        finalCoverImageUrl = await Promise.race([thumbnailPromiseRef.current, timeout]);
+      }
+
       setStage('publishing');
 
       const slug = `${slugify(title)}-${nanoid(5)}`;
@@ -233,6 +319,7 @@ export default function CreateCampaign() {
         story,
         category,
         video_url: finalVideoUrl,
+        cover_image_url: finalCoverImageUrl,
         suggested_amount: suggested,
         target_units: targetUnits,
         creator_name: creatorName,
