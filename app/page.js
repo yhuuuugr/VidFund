@@ -268,21 +268,21 @@ export default function Home() {
 
           <div className="how-item how-reveal">
             <div className="how-emoji"><img src="/record-camera.png" alt="" className="how-icon-img" /></div>
-            <div>
+            <div className="how-step-content">
               <div className="how-step-title">She recorded a 60-second video</div>
               <div className="how-step-text">No script, no editing — just her explaining what happened, right from her phone.</div>
             </div>
           </div>
           <div className="how-item how-reveal">
             <div className="how-emoji"><img src="/how-target.png" alt="" className="how-icon-img" /></div>
-            <div>
+            <div className="how-step-content">
               <div className="how-step-title">She set a goal of ₵800</div>
               <div className="how-step-text">Small and specific — exactly what she needed to reopen, nothing more.</div>
             </div>
           </div>
           <div className="how-item how-reveal">
             <div className="how-emoji"><img src="/how-link.png" alt="" className="how-icon-img" /></div>
-            <div>
+            <div className="how-step-content">
               <div className="how-step-title">She shared her link in a WhatsApp group</div>
               <div className="how-step-text">Family, friends, and their friends — passed along from person to person.</div>
             </div>
@@ -312,6 +312,7 @@ export default function Home() {
 }
 
 const styles = `
+  *, *::before, *::after { box-sizing: border-box; }
   :root {
     --green: #0B3D2E;
     --gold: #F2A93B;
@@ -466,6 +467,7 @@ const styles = `
   .how-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; font-weight: 700; margin-bottom: 6px; }
   .how-intro { font-size: 15px; color: #444; line-height: 1.5; margin: 0 0 20px; }
   .how-item { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 22px; }
+  .how-step-content { flex: 1; min-width: 0; }
 
   .how-reveal { opacity: 0; transform: translateY(22px) scale(0.97); }
   .how.in-view .how-reveal { animation: howPop 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
@@ -482,9 +484,20 @@ const styles = `
   .how-emoji {
     width: 42px; height: 42px; border-radius: 12px; background: #f4f9f4;
     display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
-    overflow: hidden;
+    overflow: visible; perspective: 300px;
   }
-  .how-icon-img { width: 78%; height: 78%; object-fit: contain; }
+  .how-icon-img {
+    width: 78%; height: 78%; object-fit: contain;
+    animation: howIconFrontBack 3.6s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  @keyframes howIconFrontBack {
+    0%, 100% { transform: translateZ(0) scale(1); }
+    50%      { transform: translateZ(26px) scale(1.16); }
+  }
+  .how-item:nth-of-type(2) .how-icon-img { animation-delay: 0.3s; }
+  .how-item:nth-of-type(3) .how-icon-img { animation-delay: 0.6s; }
+  .how-item:nth-of-type(4) .how-icon-img { animation-delay: 0.9s; }
   .how-step-title { font-size: 15.5px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
   .how-step-text { font-size: 14px; color: #555; line-height: 1.45; }
   .how-outcome {
