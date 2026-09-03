@@ -25,6 +25,7 @@ export default function Dashboard() {
 
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [reports, setReports] = useState([]);
   const [reportActionLoading, setReportActionLoading] = useState(null); // report id currently processing
 
@@ -44,11 +45,15 @@ export default function Dashboard() {
   }, [isAdmin]);
 
   async function loadReports() {
-    const { data } = await supabase
+    // Errors here were previously discarded entirely — a failed query
+    // (permissions, a bad join, anything) looked identical to "no reports",
+    // with zero indication anything had gone wrong.
+    const { data, error } = await supabase
       .from('reports')
       .select('*, campaigns(title, slug)')
       .eq('status', 'pending')
       .order('created_at', { ascending: false });
+    if (error) console.error('loadReports failed:', error.message);
     setReports(data || []);
   }
 
@@ -111,10 +116,21 @@ export default function Dashboard() {
 
   async function loadCampaigns() {
     setLoading(true);
-    const { data } = await supabase
+    // Same issue as loadReports — a failed query here was rendering as an
+    // empty campaign list with no error shown anywhere, which is exactly
+    // what made "nothing came in my admin" impossible to diagnose from the
+    // UI alone.
+    const { data, error } = await supabase
       .from('campaign_totals')
       .select('*, campaigns(creator_name, creator_momo_number, title, withdrawal_requested_at, fraud_flagged)')
       .order('unpaid_balance', { ascending: false });
+
+    if (error) {
+      console.error('loadCampaigns failed:', error.message);
+      setLoadError(error.message);
+    } else {
+      setLoadError('');
+    }
 
     // Requested-and-unpaid first, then by balance — so the ones actually
     // waiting on you surface at the top instead of getting lost in the sort.
@@ -261,6 +277,12 @@ export default function Dashboard() {
       )}
 
       <p style={{ color: '#666' }}>Platform fee: {(PLATFORM_FEE_PERCENT * 100).toFixed(0)}% per donation</p>
+
+      {loadError && (
+        <div style={{ background: '#fdecea', border: '1px solid #f5b7b1', color: '#c0392b', padding: '12px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13.5 }}>
+          <strong>Couldn't load campaigns:</strong> {loadError}
+        </div>
+      )}
 
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
         <thead>
