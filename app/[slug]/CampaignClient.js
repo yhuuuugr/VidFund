@@ -193,7 +193,8 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
           .then(async (res) => {
             if (!res.ok) {
               const body = await res.json().catch(() => ({}));
-              throw new Error(body.error || 'We could not confirm your donation.');
+              const debugStr = body.debug ? ` [keyLen:${body.debug.serviceRoleKeyLength}, host:${body.debug.supabaseUrlHost}]` : '';
+              throw new Error((body.error || 'We could not confirm your donation.') + debugStr);
             }
             if (isCreatorSupport && campaign.creator_email && typeof window !== 'undefined') {
               localStorage.setItem(unlockKey, 'true');

@@ -38,8 +38,23 @@ export async function POST(req) {
 
   if (campaignError || !campaign) {
     console.error('donate/confirm: campaign lookup failed', { campaign_id, campaignError });
+
+    // Safe diagnostics only — lengths and hostnames, never the actual secret —
+    // to help spot a mis-pasted env var (extra whitespace, missing chars, etc.)
+    const keyLen = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').length;
+    const urlHost = (() => {
+      try {
+        return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || '').host;
+      } catch {
+        return 'invalid URL';
+      }
+    })();
+
     return NextResponse.json(
-      { error: campaignError ? `Campaign lookup failed: ${campaignError.message}` : 'Campaign not found' },
+      {
+        error: campaignError ? `Campaign lookup failed: ${campaignError.message}` : 'Campaign not found',
+        debug: { serviceRoleKeyLength: keyLen, supabaseUrlHost: urlHost },
+      },
       { status: 404 }
     );
   }
