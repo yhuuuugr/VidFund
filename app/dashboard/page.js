@@ -128,7 +128,7 @@ export default function Dashboard() {
     // this file already expects, so nothing else needs to change.
     const [totalsRes, campaignsRes, payoutsRes] = await Promise.all([
       supabase.from('campaign_totals').select('*'),
-      supabase.from('campaigns').select('id, creator_name, creator_momo_number, title, withdrawal_requested_at, fraud_flagged'),
+      supabase.from('campaigns').select('id, creator_name, creator_email, creator_momo_number, title, withdrawal_requested_at, fraud_flagged'),
       supabase.from('payouts').select('*').order('created_at', { ascending: false }),
     ]);
 
@@ -324,6 +324,7 @@ export default function Dashboard() {
           <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
             <th style={th}>Campaign</th>
             <th style={th}>Creator</th>
+            <th style={th}>Account</th>
             <th style={th}>MoMo</th>
             <th style={th}>Status</th>
             <th style={th}>Unpaid balance</th>
@@ -345,6 +346,9 @@ export default function Dashboard() {
                 <tr style={{ borderBottom: '1px solid #f0f0f0', background: requestedAt ? '#fff9ec' : 'transparent' }}>
                   <td style={td}>{c.campaigns?.title}</td>
                   <td style={td}>{c.campaigns?.creator_name}</td>
+                  <td style={{ ...td, color: c.campaigns?.creator_email ? '#333' : '#bbb', fontSize: 12.5 }}>
+                    {c.campaigns?.creator_email || 'no account'}
+                  </td>
                   <td style={td}>{c.campaigns?.creator_momo_number}</td>
                   <td style={td}>
                     {requestedAt ? (
@@ -384,7 +388,7 @@ export default function Dashboard() {
                 </tr>
                 {isExpanded && history.length > 0 && (
                   <tr>
-                    <td colSpan={8} style={{ padding: '0 6px 14px', background: '#fafafa' }}>
+                    <td colSpan={9} style={{ padding: '0 6px 14px', background: '#fafafa' }}>
                       <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
                         <div style={{ padding: '8px 12px', fontSize: 12.5, fontWeight: 700, color: '#555', background: '#f3f3f3', borderBottom: '1px solid #eee' }}>
                           Payout history — ₵{totalPaidOut.toFixed(2)} paid total
