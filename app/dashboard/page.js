@@ -532,9 +532,15 @@ function Divider() {
 }
 
 function Th({ children, align }) {
+  if (!children) return <th style={{ padding: '0 10px 10px 0' }} />;
   return (
-    <th style={{ padding: '0 10px 8px 0', fontSize: 11.5, fontWeight: 500, color: c.textMuted, textAlign: align || 'left', ...body }}>
-      {children}
+    <th style={{ padding: '0 10px 10px 0', textAlign: align || 'left' }}>
+      <span style={{
+        ...heading, fontSize: 11.5, color: c.text, background: '#F2A93B',
+        padding: '5px 11px', borderRadius: 6, display: 'inline-block', whiteSpace: 'nowrap',
+      }}>
+        {children}
+      </span>
     </th>
   );
 }
