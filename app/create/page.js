@@ -106,6 +106,138 @@ export default function CreateCampaign() {
   const tusUploadRef = useRef(null); // the in-progress/resumable tus.Upload instance
   const uploadCallbacksRef = useRef({ resolve: null, reject: null }); // rebindable per attempt
 
+  // A frame grabbed from the video the moment it's selected, uploaded
+  // separately (small, non-resumable) and saved as cover_image_url. This is
+  // what shows up as the thumbnail when the campaign link is shared on
+  // WhatsApp/Facebook/iMessage — those platforms don't play video inline,
+  // they show a static image, so a real frame from the creator's own video
+  // makes a far more compelling preview than a generic placeholder graphic.
+  const [coverImageUrl, setCoverImageUrl] = useState(null);
+  const [thumbnailStatus, setThumbnailStatus] = useState('idle'); // idle | capturing | done | failed
+  const [thumbnailError, setThumbnailError] = useState('');
+  const thumbnailPromiseRef = useRef(null);
+
+  // Grabs a frame from the video using a <video> + <canvas>, and returns it
+  // as a JPEG Blob.
+  //
+  // Mobile Safari and Chrome will often refuse to decode a frame (readyState
+  // never advances) if the <video> element is fully detached from the page —
+  // it has to actually be in the DOM, even if invisible, for them to treat
+  // it as a "real" video worth decoding.
+  function captureVideoFrame(file) {
+    return new Promise((resolve, reject) => {
+      const videoEl = document.createElement('video');
+      videoEl.preload = 'auto';
+      videoEl.muted = true;
+      videoEl.playsInline = true;
+      videoEl.setAttribute('webkit-playsinline', 'true'); // older iOS Safari
+      videoEl.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(videoEl);
+
+      const objectUrl = URL.createObjectURL(file);
+      videoEl.src = objectUrl;
+      videoEl.load();
+
+      let settled = false;
+      let drawn = false;
+      const cleanup = () => {
+        URL.revokeObjectURL(objectUrl);
+        videoEl.remove();
+      };
+      const fail = (err) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(err);
+      };
+      const succeed = (blob) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        blob ? resolve(blob) : reject(new Error('Could not encode captured frame'));
+      };
+
+      // Draws whatever frame is currently loaded. Guarded so it only ever
+      // runs once, since it can be triggered from more than one path below.
+      const drawFrame = () => {
+        if (drawn || settled) return;
+        drawn = true;
+        requestAnimationFrame(() => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = videoEl.videoWidth || 720;
+            canvas.height = videoEl.videoHeight || 1280;
+            canvas.getContext('2d').drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(succeed, 'image/jpeg', 0.85);
+          } catch (err) {
+            fail(err);
+          }
+        });
+      };
+
+      // 'loadeddata' guarantees at least one frame (at time 0) is
+      // decodable — that's our reliable fallback. We *try* to nudge the
+      // playhead forward first for a nicer non-blank-first-frame thumbnail,
+      // but some mobile browsers never fire 'seeked' if the seek doesn't
+      // behave the way desktop browsers expect — previously that made
+      // capture hang until the 8s timeout. Now it just falls back to the
+      // frame-0 capture after a short 700ms grace period instead of
+      // depending on 'seeked' ever firing.
+      videoEl.addEventListener('loadeddata', () => {
+        try {
+          const duration = videoEl.duration;
+          const target = Number.isFinite(duration) ? Math.min(1, duration / 2) : 0;
+          if (target > 0) {
+            videoEl.addEventListener('seeked', drawFrame, { once: true });
+            videoEl.currentTime = target;
+            setTimeout(drawFrame, 700);
+          } else {
+            drawFrame();
+          }
+        } catch {
+          drawFrame();
+        }
+      }, { once: true });
+
+      videoEl.addEventListener('error', () => fail(new Error('Could not read video for thumbnail')), { once: true });
+
+      // Safety net: if nothing above ever fires (rare codec issue), give up
+      // after 8s instead of hanging.
+      setTimeout(() => fail(new Error('Thumbnail capture timed out')), 8000);
+    });
+  }
+
+  // Runs in the background alongside the video upload. handleSubmit gives
+  // it a short window to finish (see thumbnailPromiseRef below) but never
+  // blocks publishing on it — failure or a slow capture just means the
+  // share preview falls back to the generic image instead of a real frame.
+  async function captureAndUploadThumbnail(file, fileNameBase) {
+    setThumbnailStatus('capturing');
+    setThumbnailError('');
+    const promise = (async () => {
+      const blob = await captureVideoFrame(file);
+      const path = `thumbs/${fileNameBase}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from('campaign-videos')
+        .upload(path, blob, { contentType: 'image/jpeg', upsert: true });
+      if (uploadError) throw uploadError;
+
+      const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const publicUrl = `${projectUrl}/storage/v1/object/public/campaign-videos/${path}`;
+      setCoverImageUrl(publicUrl);
+      setThumbnailStatus('done');
+      return publicUrl;
+    })().catch((err) => {
+      console.error('Thumbnail capture failed (non-fatal):', err.message);
+      setThumbnailStatus('failed');
+      setThumbnailError(err.message || String(err));
+      return null;
+    });
+
+    thumbnailPromiseRef.current = promise;
+    return promise;
+  }
+
   const [stage, setStage] = useState('idle'); // idle | waiting-for-video | publishing
   const [error, setError] = useState('');
 
@@ -185,7 +317,10 @@ export default function CreateCampaign() {
     }
 
     setVideoFile(file);
+    setCoverImageUrl(null);
+    const fileNameBase = `${nanoid()}-${file.name}`.replace(/\s+/g, '-');
     startUpload(file);
+    captureAndUploadThumbnail(file, fileNameBase);
   }
 
   function handleRetryUpload() {
@@ -222,6 +357,16 @@ export default function CreateCampaign() {
         return;
       }
 
+      // By the time the video upload finishes, the thumbnail (a small
+      // local canvas capture + one small upload) has almost always
+      // finished too. Give it up to 3s to catch up if not — worth the
+      // wait for a real preview image instead of the generic fallback.
+      let finalCoverImageUrl = coverImageUrl;
+      if (thumbnailPromiseRef.current && !finalCoverImageUrl) {
+        const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 3000));
+        finalCoverImageUrl = await Promise.race([thumbnailPromiseRef.current, timeout]);
+      }
+
       setStage('publishing');
 
       const slug = `${slugify(title)}-${nanoid(5)}`;
@@ -233,6 +378,7 @@ export default function CreateCampaign() {
         story,
         category,
         video_url: finalVideoUrl,
+        cover_image_url: finalCoverImageUrl,
         suggested_amount: suggested,
         target_units: targetUnits,
         creator_name: creatorName,
@@ -408,6 +554,18 @@ export default function CreateCampaign() {
                 <div style={{ ...styles.progressBarFill, width: `${uploadProgress}%`, background: '#c0392b' }} />
               </div>
             )}
+            {thumbnailStatus === 'capturing' && (
+              <div style={styles.thumbStatus}>Capturing a cover image from your video…</div>
+            )}
+            {thumbnailStatus === 'done' && (
+              <div style={{ ...styles.thumbStatus, color: '#2e7d32' }}>✓ Cover image captured</div>
+            )}
+            {thumbnailStatus === 'failed' && (
+              <div style={{ ...styles.thumbStatus, color: '#c0392b' }}>
+                Couldn't auto-capture a cover image — your link preview will use the default VidFund image instead. This doesn't affect publishing.
+                {thumbnailError && <div style={{ marginTop: 4, fontFamily: 'monospace', fontSize: 11, opacity: 0.85 }}>Error: {thumbnailError}</div>}
+              </div>
+            )}
           </div>
         )}
 
@@ -540,6 +698,7 @@ const styles = {
     flexShrink: 0,
   }),
   uploadingLabel: { fontSize: 12.5, color: '#b5750a', fontWeight: 600 },
+  thumbStatus: { fontSize: 12.5, color: '#777', fontWeight: 500, marginTop: 8 },
   retryBtn: {
     fontSize: 12.5,
     fontWeight: 700,

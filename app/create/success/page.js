@@ -1,33 +1,22 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState, Suspense, useEffect } from 'react';
+import { useState, Suspense } from 'react';
+import { BrandIcon, buildShareTargets } from '../../../components/shareIcons';
 
 function ShareSuccessInner() {
   const params = useSearchParams();
   const slug = params.get('slug');
   const [copied, setCopied] = useState(false);
-  const [siteUrl, setSiteUrl] = useState(process.env.NEXT_PUBLIC_SITE_URL || '');
 
-  // If the env var isn't set correctly, fall back to whatever domain the
-  // page is actually being viewed on — so the link is never just a bare
-  // path with no domain (which breaks sharing entirely).
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SITE_URL && typeof window !== 'undefined') {
-      setSiteUrl(window.location.origin);
-    }
-  }, []);
-
+  // process.env.NEXT_PUBLIC_SITE_URL is inlined at build time, so it's
+  // correct on the server-rendered HTML and the client immediately — no
+  // need to wait for a useEffect to patch it in after hydration, which
+  // previously left a short window where the share links pointed nowhere.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
   const link = `${siteUrl}/${slug}`;
   const shareText = `I just started a fundraiser — please help support it:`;
-
-  const shareLinks = {
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + link)}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}`,
-    x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(link)}`,
-    // TikTok and Instagram don't support prefilled web share links —
-    // point people to copy the link and paste it into their bio/caption/story instead.
-  };
+  const shareTargets = buildShareTargets(link, shareText);
 
   function copyLink() {
     navigator.clipboard.writeText(link);
@@ -46,21 +35,19 @@ function ShareSuccessInner() {
 
       <p style={styles.shareLabel}>Share to:</p>
       <div style={styles.shareGrid}>
-        <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.shareBtn}>
-          🟢 WhatsApp
-        </a>
-        <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareBtn}>
-          🔵 Facebook
-        </a>
-        <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareBtn}>
-          𝕏 X
-        </a>
-        <button style={styles.shareBtn} onClick={copyLink}>
-          🎵 TikTok (copy link, paste in bio)
-        </button>
-        <button style={styles.shareBtn} onClick={copyLink}>
-          📸 Instagram (copy link, paste in story)
-        </button>
+        {shareTargets.map((target) =>
+          target.kind === 'link' ? (
+            <a key={target.key} href={target.href} target="_blank" rel="noreferrer" style={styles.shareBtn}>
+              <BrandIcon name={target.key} size={20} />
+              {target.label}
+            </a>
+          ) : (
+            <button key={target.key} style={styles.shareBtn} onClick={copyLink} title={target.hint}>
+              <BrandIcon name={target.key} size={20} />
+              {target.label} ({copied ? 'copied!' : 'copy link'})
+            </button>
+          )
+        )}
       </div>
 
       <a href="/my-fundraisers" style={styles.dashboardLink}>
@@ -87,6 +74,7 @@ const styles = {
   shareGrid: { display: 'flex', flexDirection: 'column', gap: 10 },
   dashboardLink: { display: 'block', marginTop: 20, fontSize: 14, color: '#1a7d3c', fontWeight: 700, textDecoration: 'none' },
   shareBtn: {
+    display: 'flex', alignItems: 'center', gap: 10,
     padding: '14px',
     borderRadius: 10,
     border: '1px solid #ddd',
