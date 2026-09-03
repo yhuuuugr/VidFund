@@ -399,8 +399,13 @@ export default function Dashboard() {
 
         {/* Campaigns */}
         <div style={{ borderTop: `1px solid ${c.border}`, marginTop: 22, paddingTop: 18 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
-            <h2 style={{ ...heading, fontSize: 15, margin: 0 }}>Campaigns</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <span style={{
+              ...heading, fontSize: 15, color: c.text, background: '#F2A93B',
+              padding: '9px 18px', borderRadius: 8, display: 'inline-block',
+            }}>
+              Campaigns
+            </span>
             <span style={{ fontSize: 12, color: c.textMuted }}>{campaigns.length} total</span>
           </div>
 
