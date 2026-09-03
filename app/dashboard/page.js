@@ -6,6 +6,27 @@ import { supabase } from '../../lib/supabaseClient';
 const PLATFORM_FEE_PERCENT = 0.05; // keep in sync with .env PLATFORM_FEE_PERCENT
 const ADMIN_EMAIL = 'edwinafriyie16@gmail.com';
 
+const c = {
+  cream: '#FFFBF2',
+  border: '#E8E2D0',
+  borderSubtle: '#F2EFE4',
+  text: '#1A1A1A',
+  textSecondary: '#5B5A53',
+  textMuted: '#B0AD9F',
+  green900: '#0B3D2E',
+  green600: '#1A7D3C',
+  amberBg: '#FFF7E6',
+  amberText: '#8A5A10',
+  amberBorder: '#F2A93B',
+  redBg: '#FBEAE7',
+  redText: '#8A2E20',
+  redBorder: '#C0392B',
+};
+
+const heading = { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 };
+const mono = { fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 };
+const body = { fontFamily: "'Inter', sans-serif" };
+
 function timeAgo(dateStr) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
   if (seconds < 60) return 'just now';
@@ -14,6 +35,10 @@ function timeAgo(dateStr) {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;
+}
+
+function money(n) {
+  return `₵${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export default function Dashboard() {
@@ -176,7 +201,7 @@ export default function Dashboard() {
     const payoutAmount = unpaidBalance - platformCut;
 
     const confirmed = confirm(
-      `Mark ₵${payoutAmount.toFixed(2)} as paid to this creator (after ₵${platformCut.toFixed(2)} platform fee)?`
+      `Mark ${money(payoutAmount)} as paid to this creator (after ${money(platformCut)} platform fee)?`
     );
     if (!confirmed) return;
 
@@ -216,14 +241,19 @@ export default function Dashboard() {
 
   // --- Auth gates ---
   if (session === undefined) {
-    return <main style={{ padding: 20, fontFamily: 'system-ui, sans-serif' }}><p>Loading…</p></main>;
+    return (
+      <main style={{ padding: 24, ...body, color: c.text }}>
+        <p style={{ fontSize: 14, color: c.textSecondary }}>Loading…</p>
+      </main>
+    );
   }
 
   if (session === null) {
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif' }}>
-        <h1 style={{ fontSize: 22 }}>Admin sign in</h1>
-        <p style={{ color: '#666', fontSize: 14, marginBottom: 20 }}>This page is restricted.</p>
+      <main style={{ maxWidth: 400, margin: '64px auto 0', padding: '0 24px', ...body }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: c.green900, marginBottom: 20 }} />
+        <h1 style={{ ...heading, fontSize: 22, color: c.text, margin: '0 0 6px' }}>Admin sign in</h1>
+        <p style={{ color: c.textSecondary, fontSize: 14, marginBottom: 24 }}>This page is restricted to the VidFund admin account.</p>
         {!otpSent ? (
           <form onSubmit={handleSendMagicLink} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <input
@@ -232,19 +262,19 @@ export default function Dashboard() {
               onChange={(e) => setAuthEmail(e.target.value)}
               placeholder="you@example.com"
               required
-              style={{ padding: '10px 12px', borderRadius: 8, border: '1px solid #ccc', fontSize: 15 }}
+              style={{ padding: '11px 13px', borderRadius: 8, border: `1px solid ${c.border}`, fontSize: 14.5, ...body, background: '#fff', color: c.text, outline: 'none' }}
             />
-            {authError && <p style={{ color: '#c0392b', fontSize: 14, margin: 0 }}>{authError}</p>}
+            {authError && <p style={{ color: c.redText, fontSize: 13.5, margin: 0 }}>{authError}</p>}
             <button
               type="submit"
               disabled={authSubmitting}
-              style={{ padding: '12px', borderRadius: 8, border: 'none', background: '#1a7d3c', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              style={{ padding: '12px', borderRadius: 8, border: 'none', background: c.green900, color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', ...body }}
             >
               {authSubmitting ? 'Sending…' : 'Send me a sign-in link'}
             </button>
           </form>
         ) : (
-          <p style={{ fontSize: 14, color: '#2a6b2a' }}>Check <strong>{authEmail}</strong> for a sign-in link.</p>
+          <p style={{ fontSize: 14, color: c.green600 }}>Check <strong>{authEmail}</strong> for a sign-in link.</p>
         )}
       </main>
     );
@@ -252,14 +282,14 @@ export default function Dashboard() {
 
   if (!isAdmin) {
     return (
-      <main style={{ maxWidth: 420, margin: '0 auto', padding: 24, fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
-        <h1 style={{ fontSize: 22 }}>Access denied</h1>
-        <p style={{ color: '#666', fontSize: 14 }}>
+      <main style={{ maxWidth: 400, margin: '64px auto 0', padding: '0 24px', textAlign: 'center', ...body }}>
+        <h1 style={{ ...heading, fontSize: 22, color: c.text, margin: '0 0 8px' }}>Access denied</h1>
+        <p style={{ color: c.textSecondary, fontSize: 14 }}>
           Signed in as {session.user.email}. This page is restricted to the admin account.
         </p>
         <button
           onClick={() => supabase.auth.signOut()}
-          style={{ marginTop: 12, background: 'none', border: 'none', color: '#1a7d3c', fontWeight: 700, cursor: 'pointer' }}
+          style={{ marginTop: 14, background: 'none', border: 'none', color: c.green600, fontWeight: 600, fontSize: 14, cursor: 'pointer', ...body }}
         >
           Sign out
         </button>
@@ -267,160 +297,268 @@ export default function Dashboard() {
     );
   }
 
-  if (loading) return <p style={{ padding: 20 }}>Loading…</p>;
+  if (loading) {
+    return (
+      <main style={{ padding: 24, ...body }}>
+        <p style={{ fontSize: 14, color: c.textSecondary }}>Loading…</p>
+      </main>
+    );
+  }
+
+  const totalUnpaid = campaigns.reduce((sum, cRow) => sum + Number(cRow.unpaid_balance || 0), 0);
+  const requestedCount = campaigns.filter((cRow) => cRow.campaigns?.withdrawal_requested_at).length;
 
   return (
-    <main style={{ maxWidth: 800, margin: '0 auto', padding: 20, fontFamily: 'system-ui, sans-serif' }}>
-      <h1>Payout dashboard</h1>
+    <>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap"
+        rel="stylesheet"
+      />
+      <main style={{ maxWidth: 900, margin: '0 auto', padding: '32px 24px 80px', ...body, color: c.text }}>
 
-      {reports.length > 0 && (
-        <div style={{ marginBottom: 30 }}>
-          <h2 style={{ fontSize: 18, color: '#c0392b', marginBottom: 10 }}>
-            Pending reports ({reports.length})
-          </h2>
-          {reports.map((r) => (
-            <div key={r.id} style={{ background: '#fdf2f0', border: '1px solid #f5c6c0', borderRadius: 10, padding: 14, marginBottom: 10 }}>
-              <div style={{ fontWeight: 700, fontSize: 14.5, marginBottom: 4 }}>
-                {r.campaigns?.title} <span style={{ color: '#999', fontWeight: 400, fontSize: 12 }}>· {timeAgo(r.created_at)}</span>
-              </div>
-              <div style={{ fontSize: 14, color: '#333', marginBottom: 4 }}>{r.reason}</div>
-              {r.reporter_contact && (
-                <div style={{ fontSize: 12.5, color: '#888', marginBottom: 8 }}>Contact: {r.reporter_contact}</div>
-              )}
-              <a href={`/${r.campaigns?.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 12.5, color: '#1a7d3c', fontWeight: 700 }}>
-                View campaign →
-              </a>
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button
-                  onClick={() => handleReportAction(r.id, 'dismiss')}
-                  disabled={reportActionLoading === r.id}
-                  style={{ padding: '7px 14px', borderRadius: 6, border: '1px solid #ccc', background: '#fff', cursor: 'pointer', fontSize: 13 }}
-                >
-                  Dismiss
-                </button>
-                <button
-                  onClick={() => handleReportAction(r.id, 'confirm_fraud')}
-                  disabled={reportActionLoading === r.id}
-                  style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: '#c0392b', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
-                >
-                  {reportActionLoading === r.id ? 'Processing…' : 'Confirm fraud & refund 50%'}
-                </button>
-              </div>
-            </div>
-          ))}
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', borderBottom: `1px solid ${c.border}`, paddingBottom: 20 }}>
+          <div>
+            <h1 style={{ ...heading, fontSize: 24, margin: 0 }}>Payout dashboard</h1>
+            <p style={{ fontSize: 13, color: c.textMuted, margin: '5px 0 0' }}>Platform fee {(PLATFORM_FEE_PERCENT * 100).toFixed(0)}% per donation</p>
+          </div>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            style={{ background: 'none', border: 'none', color: c.textSecondary, fontSize: 13, cursor: 'pointer', ...body }}
+          >
+            Sign out
+          </button>
         </div>
-      )}
 
-      <p style={{ color: '#666' }}>Platform fee: {(PLATFORM_FEE_PERCENT * 100).toFixed(0)}% per donation</p>
-
-      {loadError && (
-        <div style={{ background: '#fdecea', border: '1px solid #f5b7b1', color: '#c0392b', padding: '12px 14px', borderRadius: 8, marginBottom: 16, fontSize: 13.5 }}>
-          <strong>Couldn't load campaigns:</strong> {loadError}
+        {/* Stat strip */}
+        <div style={{ display: 'flex', padding: '22px 0' }}>
+          <Stat label="Pending reports" value={reports.length} tone={reports.length > 0 ? 'danger' : 'default'} />
+          <Divider />
+          <Stat label="Total unpaid balance" value={money(totalUnpaid)} />
+          <Divider />
+          <Stat label="Withdrawals requested" value={requestedCount} tone={requestedCount > 0 ? 'amber' : 'default'} />
         </div>
-      )}
 
-      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: 20 }}>
-        <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
-          <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
-            <th style={th}>Campaign</th>
-            <th style={th}>Creator</th>
-            <th style={th}>Account</th>
-            <th style={th}>MoMo</th>
-            <th style={th}>Status</th>
-            <th style={th}>Unpaid balance</th>
-            <th style={th}>You send (after fee)</th>
-            <th style={th}></th>
-            <th style={th}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {campaigns.map((c) => {
-            const unpaid = Number(c.unpaid_balance || 0);
-            const toSend = unpaid * (1 - PLATFORM_FEE_PERCENT);
-            const requestedAt = c.campaigns?.withdrawal_requested_at;
-            const history = payoutsByCampaign.get(c.campaign_id) || [];
-            const isExpanded = expandedHistory.has(c.campaign_id);
-            const totalPaidOut = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-            return (
-              <Fragment key={c.campaign_id}>
-                <tr style={{ borderBottom: '1px solid #f0f0f0', background: requestedAt ? '#fff9ec' : 'transparent' }}>
-                  <td style={td}>{c.campaigns?.title}</td>
-                  <td style={td}>{c.campaigns?.creator_name}</td>
-                  <td style={{ ...td, color: c.campaigns?.creator_email ? '#333' : '#bbb', fontSize: 12.5 }}>
-                    {c.campaigns?.creator_email || 'no account'}
-                  </td>
-                  <td style={td}>{c.campaigns?.creator_momo_number}</td>
-                  <td style={td}>
-                    {requestedAt ? (
-                      <span style={{ color: '#8a5a10', fontWeight: 700, fontSize: 12.5 }}>
-                        Requested {timeAgo(requestedAt)}
-                      </span>
-                    ) : unpaid > 0 ? (
-                      <span style={{ color: '#999', fontSize: 12.5 }}>Not requested</span>
-                    ) : (
-                      <span style={{ color: '#ccc', fontSize: 12.5 }}>—</span>
-                    )}
-                  </td>
-                  <td style={td}>₵{unpaid.toFixed(2)}</td>
-                  <td style={td}>₵{toSend.toFixed(2)}</td>
-                  <td style={td}>
-                    {c.campaigns?.fraud_flagged ? (
-                      <span style={{ fontSize: 12, color: '#c0392b', fontWeight: 700 }}>Fraud — blocked</span>
-                    ) : unpaid > 0 && (
-                      <button
-                        onClick={() => markPaidOut(c.campaign_id, unpaid)}
-                        style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#1a7d3c', color: '#fff', cursor: 'pointer' }}
-                      >
-                        Mark paid
-                      </button>
-                    )}
-                  </td>
-                  <td style={td}>
-                    {history.length > 0 && (
-                      <button
-                        onClick={() => toggleHistory(c.campaign_id)}
-                        style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#333' }}
-                      >
-                        {isExpanded ? '▾' : '▸'} History ({history.length})
-                      </button>
-                    )}
-                  </td>
+        {loadError && (
+          <div style={{ background: c.redBg, border: `1px solid ${c.redBorder}`, color: c.redText, padding: '12px 14px', borderRadius: 8, marginBottom: 20, fontSize: 13.5 }}>
+            <strong>Couldn&apos;t load campaigns:</strong> {loadError}
+          </div>
+        )}
+
+        {/* Reports */}
+        <div style={{ borderTop: `1px solid ${c.border}`, paddingTop: 18 }}>
+          {reports.length > 0 ? (
+            <>
+              <h2 style={{ ...heading, fontSize: 15, color: c.redText, margin: '0 0 12px' }}>
+                Pending reports ({reports.length})
+              </h2>
+              {reports.map((r) => (
+                <div
+                  key={r.id}
+                  style={{
+                    background: c.redBg,
+                    borderLeft: `3px solid ${c.redBorder}`,
+                    borderRadius: 0,
+                    padding: '12px 16px',
+                    marginBottom: 10,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                    <span style={{ fontWeight: 600, fontSize: 14.5 }}>{r.campaigns?.title}</span>
+                    <span style={{ color: c.textMuted, fontSize: 12, whiteSpace: 'nowrap' }}>{timeAgo(r.created_at)}</span>
+                  </div>
+                  <p style={{ fontSize: 13.5, color: c.text, margin: '5px 0 4px' }}>{r.reason}</p>
+                  {r.reporter_contact && (
+                    <p style={{ fontSize: 12, color: c.textMuted, margin: '0 0 10px' }}>Contact: {r.reporter_contact}</p>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10 }}>
+                    <button
+                      onClick={() => handleReportAction(r.id, 'dismiss')}
+                      disabled={reportActionLoading === r.id}
+                      style={{ padding: '7px 14px', borderRadius: 6, border: `1px solid ${c.border}`, background: '#fff', cursor: 'pointer', fontSize: 12.5, ...body }}
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      onClick={() => handleReportAction(r.id, 'confirm_fraud')}
+                      disabled={reportActionLoading === r.id}
+                      style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: c.redBorder, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, ...body }}
+                    >
+                      {reportActionLoading === r.id ? 'Processing…' : 'Confirm fraud, refund 50%'}
+                    </button>
+                    <a
+                      href={`/${r.campaigns?.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{ marginLeft: 'auto', fontSize: 12.5, color: c.green600, fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      View campaign →
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <p style={{ fontSize: 13, color: c.textSecondary, margin: 0 }}>
+              No pending reports. Anything flagged by a visitor shows up here first.
+            </p>
+          )}
+        </div>
+
+        {/* Campaigns */}
+        <div style={{ borderTop: `1px solid ${c.border}`, marginTop: 22, paddingTop: 18 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <h2 style={{ ...heading, fontSize: 15, margin: 0 }}>Campaigns</h2>
+            <span style={{ fontSize: 12, color: c.textMuted }}>{campaigns.length} total</span>
+          </div>
+
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: `1px solid ${c.border}` }}>
+                  <Th>Campaign</Th>
+                  <Th>Creator</Th>
+                  <Th>Account</Th>
+                  <Th>MoMo</Th>
+                  <Th>Status</Th>
+                  <Th align="right">Unpaid</Th>
+                  <Th align="right">You send</Th>
+                  <Th></Th>
+                  <Th></Th>
                 </tr>
-                {isExpanded && history.length > 0 && (
-                  <tr>
-                    <td colSpan={9} style={{ padding: '0 6px 14px', background: '#fafafa' }}>
-                      <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
-                        <div style={{ padding: '8px 12px', fontSize: 12.5, fontWeight: 700, color: '#555', background: '#f3f3f3', borderBottom: '1px solid #eee' }}>
-                          Payout history — ₵{totalPaidOut.toFixed(2)} paid total
-                        </div>
-                        {history.map((p) => (
-                          <div
-                            key={p.id}
-                            style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: 13, borderBottom: '1px solid #f2f2f2' }}
-                          >
-                            <span style={{ color: '#666' }}>
-                              {new Date(p.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                              {' · '}
-                              {new Date(p.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <span style={{ color: '#666' }}>{p.momo_number}</span>
-                            <span style={{ fontWeight: 700, color: '#1a7d3c' }}>₵{Number(p.amount).toFixed(2)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-        </table>
-      </div>
-    </main>
+              </thead>
+              <tbody>
+                {campaigns.map((cRow) => {
+                  const unpaid = Number(cRow.unpaid_balance || 0);
+                  const toSend = unpaid * (1 - PLATFORM_FEE_PERCENT);
+                  const requestedAt = cRow.campaigns?.withdrawal_requested_at;
+                  const isFraud = cRow.campaigns?.fraud_flagged;
+                  const history = payoutsByCampaign.get(cRow.campaign_id) || [];
+                  const isExpanded = expandedHistory.has(cRow.campaign_id);
+                  const totalPaidOut = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+                  const rowBg = isFraud ? c.redBg : requestedAt ? c.amberBg : 'transparent';
+                  const accentBorder = isFraud ? c.redBorder : requestedAt ? c.amberBorder : 'transparent';
+                  const dim = !isFraud && !requestedAt && unpaid === 0;
+
+                  return (
+                    <Fragment key={cRow.campaign_id}>
+                      <tr style={{ borderBottom: `1px solid ${c.borderSubtle}`, background: rowBg }}>
+                        <Td style={{ borderLeft: `3px solid ${accentBorder}`, fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
+                        <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_name}</Td>
+                        <Td style={{ color: cRow.campaigns?.creator_email ? c.textSecondary : c.textMuted, fontSize: 12 }}>
+                          {cRow.campaigns?.creator_email || 'no account'}
+                        </Td>
+                        <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
+                        <Td>
+                          {isFraud ? (
+                            <Badge tone="red">Fraud — blocked</Badge>
+                          ) : requestedAt ? (
+                            <Badge tone="amber">Requested {timeAgo(requestedAt)}</Badge>
+                          ) : unpaid > 0 ? (
+                            <span style={{ fontSize: 12, color: c.textSecondary }}>Not requested</span>
+                          ) : (
+                            <span style={{ fontSize: 12, color: c.textMuted }}>—</span>
+                          )}
+                        </Td>
+                        <Td align="right" style={{ ...mono, fontSize: 13, color: dim ? c.textMuted : c.text }}>{money(unpaid)}</Td>
+                        <Td align="right" style={{ ...mono, fontSize: 13, color: dim ? c.textMuted : c.text }}>{unpaid > 0 ? money(toSend) : '—'}</Td>
+                        <Td>
+                          {isFraud ? (
+                            <span style={{ fontSize: 11.5, color: c.redText, fontWeight: 600 }}>Payout disabled</span>
+                          ) : unpaid > 0 && (
+                            <button
+                              onClick={() => markPaidOut(cRow.campaign_id, unpaid)}
+                              style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: c.green600, color: '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, ...body }}
+                            >
+                              Mark paid
+                            </button>
+                          )}
+                        </Td>
+                        <Td>
+                          {history.length > 0 && (
+                            <button
+                              onClick={() => toggleHistory(cRow.campaign_id)}
+                              style={{ padding: '5px 10px', borderRadius: 6, border: `1px solid ${c.border}`, background: '#fff', cursor: 'pointer', fontSize: 12, color: c.textSecondary, whiteSpace: 'nowrap', ...body }}
+                            >
+                              {isExpanded ? '▾' : '▸'} History ({history.length})
+                            </button>
+                          )}
+                        </Td>
+                      </tr>
+                      {isExpanded && history.length > 0 && (
+                        <tr>
+                          <td colSpan={9} style={{ padding: '0 0 14px', background: c.borderSubtle }}>
+                            <div style={{ padding: '10px 20px' }}>
+                              <div style={{ fontSize: 12, fontWeight: 600, color: c.textSecondary, marginBottom: 6 }}>
+                                {money(totalPaidOut)} paid total
+                              </div>
+                              {history.map((p) => (
+                                <div
+                                  key={p.id}
+                                  style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontSize: 13, borderBottom: `1px solid ${c.border}` }}
+                                >
+                                  <span style={{ color: c.textSecondary }}>
+                                    {new Date(p.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                                    {' · '}
+                                    {new Date(p.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                  <span style={{ color: c.textSecondary }}>{p.momo_number}</span>
+                                  <span style={{ ...mono, color: c.green600 }}>{money(p.amount)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </>
   );
 }
 
-const th = { padding: '8px 6px', fontSize: 13, color: '#666' };
-const td = { padding: '10px 6px', fontSize: 14 };
+function Stat({ label, value, tone = 'default' }) {
+  const color = tone === 'danger' ? c.redText : tone === 'amber' ? c.amberText : c.text;
+  return (
+    <div style={{ flex: 1 }}>
+      <div style={{ ...mono, fontSize: 22, color }}>{value}</div>
+      <div style={{ fontSize: 12, color: c.textMuted, marginTop: 3 }}>{label}</div>
+    </div>
+  );
+}
+
+function Divider() {
+  return <div style={{ width: 1, background: c.border, margin: '2px 24px' }} />;
+}
+
+function Badge({ tone, children }) {
+  const bg = tone === 'red' ? c.redBg : c.amberBg;
+  const text = tone === 'red' ? c.redText : c.amberText;
+  return (
+    <span style={{ fontSize: 11, fontWeight: 600, color: text, background: bg, padding: '3px 9px', borderRadius: 5, whiteSpace: 'nowrap' }}>
+      {children}
+    </span>
+  );
+}
+
+function Th({ children, align }) {
+  return (
+    <th style={{ padding: '0 10px 8px 0', fontSize: 11.5, fontWeight: 500, color: c.textMuted, textAlign: align || 'left', ...body }}>
+      {children}
+    </th>
+  );
+}
+
+function Td({ children, align, style }) {
+  return (
+    <td style={{ padding: '11px 10px 11px 0', fontSize: 13.5, textAlign: align || 'left', ...body, ...style }}>
+      {children}
+    </td>
+  );
+}
