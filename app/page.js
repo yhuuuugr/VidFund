@@ -12,8 +12,6 @@ export default function Home() {
   const heroRef = useRef(null);
   const howSectionRef = useRef(null);
   const recordCardRef = useRef(null);
-  const tallyRef = useRef(null);
-  const coinsElRef = useRef([]);
 
   const quotesRef = useRef([
     { text: 'No one has ever become poor by giving.', author: 'Anne Frank' },
@@ -130,48 +128,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Coins pop up one by one (staggered) with a flip baked into the same
-    // animation, every time the tally card scrolls into view — and reset
-    // (hidden again) when it scrolls out, so scrolling back re-triggers
-    // the whole sequence instead of it only ever playing once on load.
-    const section = tallyRef.current;
-    if (!section) return;
-
-    // IntersectionObserver can fire repeatedly while the section is still
-    // fully in view — especially during momentum/rubber-band scrolling on
-    // iOS, which reports intersection ratio changes continuously. Without
-    // this guard, every one of those callbacks was restarting all 30 coin
-    // animations from scratch mid-flight, which is what looked like the
-    // whole card vibrating: it was actually re-triggering many times a
-    // second, never letting a single pop finish smoothly.
-    let wasInView = false;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const coins = coinsElRef.current;
-        if (entry.isIntersecting && !wasInView) {
-          wasInView = true;
-          section.classList.add('in-view');
-          coins.forEach((coin, i) => {
-            coin.classList.remove('coin-pop');
-            void coin.offsetWidth; // restart animation even if it was already played
-            coin.style.animationDelay = `${i * 0.025}s`;
-            coin.classList.add('coin-pop');
-          });
-        } else if (!entry.isIntersecting && wasInView) {
-          wasInView = false;
-          section.classList.remove('in-view');
-          coins.forEach((coin) => coin.classList.remove('coin-pop'));
-        }
-      },
-      { threshold: 0.25 }
-    );
-    observer.observe(section);
-
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
     // Build the 30-coin grid, each coin sharing one real coin photo
     const grid = coinGridRef.current;
     const coins = [];
@@ -182,12 +138,12 @@ export default function Home() {
         cell.className = 'coin-cell';
         const coin = document.createElement('div');
         coin.className = 'coin';
+        coin.style.animationDelay = `${i * 0.02}s`;
         cell.appendChild(coin);
         grid.appendChild(cell);
         coins.push(coin);
       }
     }
-    coinsElRef.current = coins;
 
     // Randomly flip a few coins at a time, forever, so the card feels alive
     function flipRandomCoins() {
@@ -320,7 +276,7 @@ export default function Home() {
         </section>
 
         {/* The philosophy: explains WHY small suggested amounts work, to the creator */}
-        <section className="philosophy" ref={tallyRef}>
+        <section className="philosophy">
           <div className="tally">
             <div className="tally-label">You don't need one person to give ₵8,000</div>
             <div className="coin-grid" ref={coinGridRef} />
@@ -509,23 +465,9 @@ const styles = `
     background-position: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
     transform-style: preserve-3d;
-    opacity: 0;
-    transform: scale(0.3) rotateY(0deg);
+    animation: settle 0.4s ease-out both;
   }
-  /* Each coin pops up individually (staggered via an inline animation-delay
-     set from JS) with a spin baked into the same animation, retriggered
-     every time the tally card scrolls into view rather than only once. */
-  .coin.coin-pop {
-    animation: coinPopFlip 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  }
-  @keyframes coinPopFlip {
-    0%   { opacity: 0; transform: scale(0.3) rotateY(0deg); }
-    55%  { opacity: 1; transform: scale(1.15) rotateY(200deg); filter: brightness(1.25); }
-    100% { opacity: 1; transform: scale(1) rotateY(360deg); filter: brightness(1); }
-  }
-  /* Ambient random flips (see flipRandomCoins in the effect above) keep the
-     card feeling alive after the coins have settled in. Declared after
-     .coin-pop so it wins the cascade when both classes land on one coin. */
+  @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
   .coin.flip { animation: flip 1.1s ease-in-out; }
   @keyframes flip {
     0%   { transform: rotateY(0deg) scale(1); }
