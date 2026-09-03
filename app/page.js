@@ -11,6 +11,7 @@ export default function Home() {
   const quoteAuthorRef = useRef(null);
   const heroRef = useRef(null);
   const howSectionRef = useRef(null);
+  const recordCardRef = useRef(null);
 
   const quotesRef = useRef([
     { text: 'No one has ever become poor by giving.', author: 'Anne Frank' },
@@ -95,6 +96,30 @@ export default function Home() {
       { threshold: 0.15 }
     );
     observer.observe(section);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    // The record card pops in with a strong, bouncy "out of nowhere" feel
+    // every time it scrolls into view — and resets when it scrolls out, so
+    // scrolling back up to it triggers the pop again instead of it just
+    // sitting there static (the hero's own observer above only fires once,
+    // near initial page load, since the hero sits right at the top).
+    const card = recordCardRef.current;
+    if (!card) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          card.classList.add('in-view');
+        } else {
+          card.classList.remove('in-view');
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(card);
 
     return () => observer.disconnect();
   }, []);
@@ -238,12 +263,12 @@ export default function Home() {
           <p className="reassure">Takes a few minutes. No long forms. Just your story.</p>
 
           {/* Visual cue: this is a video-first platform */}
-          <div className="recordCard">
+          <div className="recordCard" ref={recordCardRef}>
             <div className="recordDot" />
-            <div className="camWrap">
+            <div className="camWrap record-pop">
               <img className="camImg" src="/record-camera.png" alt="Video camera" />
             </div>
-            <div className="recordCaption">Record right in the app, or upload your own video</div>
+            <div className="recordCaption record-pop">Record right in the app, or upload your own video</div>
           </div>
         </section>
 
@@ -386,8 +411,6 @@ const styles = `
     padding: 28px 20px;
     text-align: center;
     color: #fff;
-    opacity: 0;
-    animation: fadeUp 0.6s ease-out 0.62s forwards;
     margin-bottom: 30px;
     perspective: 600px;
   }
@@ -399,8 +422,6 @@ const styles = `
   @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
   .camWrap {
     display: flex; justify-content: center; align-items: flex-end; height: 150px; margin-bottom: 6px;
-    opacity: 0;
-    animation: settleCam 0.7s cubic-bezier(0.2,0.9,0.3,1) forwards;
   }
   .camImg {
     max-height: 140px; max-width: 88%; object-fit: contain;
@@ -412,11 +433,21 @@ const styles = `
     0%, 100% { transform: translateZ(0) scale(1); filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45)); }
     50%      { transform: translateZ(60px) scale(1.09); filter: drop-shadow(0 20px 22px rgba(0,0,0,0.55)); }
   }
-  @keyframes settleCam {
-    from { opacity: 0; transform: translateY(30px) scale(0.92); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
-  }
   .recordCaption { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; }
+
+  /* Strong "pop out of nowhere" reveal, retriggered every time the card
+     scrolls into view (and reset when it scrolls out) — the easeOutBack
+     curve is what gives it the springy overshoot instead of a plain fade. */
+  .record-pop { opacity: 0; transform: scale(0.4) translateY(20px); }
+  .recordCard.in-view .record-pop {
+    animation: recordPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .recordCard.in-view .camWrap.record-pop { animation-delay: 0s; }
+  .recordCard.in-view .recordCaption.record-pop { animation-delay: 0.16s; }
+  @keyframes recordPop {
+    from { opacity: 0; transform: scale(0.4) translateY(20px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
 
   .philosophy { padding-bottom: 10px; }
   .tally { background: var(--green); border-radius: 18px; padding: 22px 20px 20px; color: #fff; position: relative; overflow: hidden; }
