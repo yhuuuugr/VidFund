@@ -60,15 +60,12 @@ export default function Home() {
       }, 350);
     };
 
-    let wasInView = false;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && !wasInView) {
-          wasInView = true;
+        if (entry.isIntersecting) {
           hero.classList.add('in-view');
           playQuote();
-        } else if (!entry.isIntersecting && wasInView) {
-          wasInView = false;
+        } else {
           hero.classList.remove('in-view');
         }
       },
@@ -107,16 +104,21 @@ export default function Home() {
     // The record card pops in with a strong, bouncy "out of nowhere" feel
     // every time it scrolls into view — and resets when it scrolls out, so
     // scrolling back up to it triggers the pop again instead of it just
-    // sitting there static (the hero's own observer above only fires once,
-    // near initial page load, since the hero sits right at the top).
+    // sitting there static. Guarded so it only fires on an actual
+    // hidden→visible transition, not on every callback while it's already
+    // visible (mobile browsers can fire IntersectionObserver repeatedly
+    // during momentum scrolling even with no real state change).
     const card = recordCardRef.current;
     if (!card) return;
 
+    let wasInView = false;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) {
+        if (entry.isIntersecting && !wasInView) {
+          wasInView = true;
           card.classList.add('in-view');
-        } else {
+        } else if (!entry.isIntersecting && wasInView) {
+          wasInView = false;
           card.classList.remove('in-view');
         }
       },
@@ -139,56 +141,25 @@ export default function Home() {
         const coin = document.createElement('div');
         coin.className = 'coin';
         coin.style.animationDelay = `${i * 0.02}s`;
-        // Clears 'flip' once a flip actually finishes, so the "is this
-        // coin still mid-flip" check in flipRandomCoins below stays
-        // accurate — without this, the class would just linger forever
-        // after the first flip and make it look like every coin needs a
-        // reflow-forcing restart on every future pick, even long after
-        // it's actually done animating.
-        coin.addEventListener('animationend', (e) => {
-          if (e.animationName === 'flip') coin.classList.remove('flip');
-        });
         cell.appendChild(coin);
         grid.appendChild(cell);
         coins.push(coin);
       }
     }
 
-    // Randomly flip a few coins at a time, forever, so the card feels alive.
-    //
-    // Forcing a synchronous layout reflow (via offsetWidth) is expensive —
-    // doing it unconditionally, per coin, every 1.4s forever was almost
-    // certainly the real cause of the whole page occasionally shaking: it
-    // was recalculating the page's entire layout up to 4 times a cycle,
-    // indefinitely, for as long as the page stayed open. Most of the time a
-    // freshly-chosen coin isn't already mid-flip, so it can just start the
-    // animation directly with zero reflow cost. A restart (which needs the
-    // reflow trick to actually replay the animation) is only necessary for
-    // a coin that's still mid-flip from an overlapping earlier pick — and
-    // even then, every coin that needs it shares a single reflow instead of
-    // one each.
+    // Randomly flip a few coins at a time, forever, so the card feels alive
     function flipRandomCoins() {
       const howMany = 2 + Math.floor(Math.random() * 3); // 2-4 coins
       const chosen = new Set();
       while (chosen.size < howMany && chosen.size < coins.length) {
         chosen.add(Math.floor(Math.random() * coins.length));
       }
-
-      const needsRestart = [];
       chosen.forEach((idx) => {
         const c = coins[idx];
-        if (c.classList.contains('flip')) {
-          needsRestart.push(c);
-        } else {
-          c.classList.add('flip');
-        }
+        c.classList.remove('flip');
+        void c.offsetWidth; // restart animation
+        c.classList.add('flip');
       });
-
-      if (needsRestart.length > 0) {
-        needsRestart.forEach((c) => c.classList.remove('flip'));
-        void document.body.offsetHeight; // one shared forced reflow, not one per coin
-        needsRestart.forEach((c) => c.classList.add('flip'));
-      }
     }
     const flipInterval = setInterval(flipRandomCoins, 1400);
     const flipTimeout = setTimeout(flipRandomCoins, 900);
@@ -233,25 +204,14 @@ export default function Home() {
       amountLineEl.innerHTML = `<span class="fade">You can get ₵${combo.amount} from ${combo.people.toLocaleString()} people</span>`;
     }
 
-    // Updates the total every rAF frame (~60 times/sec) for 900ms was the
-    // real cause of this specific shake — each text change was forcing the
-    // browser to recalculate layout, since the number's width changes as
-    // digits/commas are added while counting up. Throttling to roughly
-    // every 40ms cuts that from ~54 forced layouts down to ~22, which
-    // still reads as a perfectly smooth count-up but is far cheaper —
-    // and it happens every 3.2s, forever, so cutting the cost here matters.
     function countUpTotal() {
       let start = null;
-      let lastUpdate = 0;
       function step(ts) {
         if (!start) start = ts;
         const progress = Math.min((ts - start) / 900, 1);
-        if (ts - lastUpdate >= 40 || progress >= 1) {
-          lastUpdate = ts;
-          const eased = 1 - Math.pow(1 - progress, 3);
-          const val = Math.floor(eased * TARGET);
-          if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
-        }
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const val = Math.floor(eased * TARGET);
+        if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
         if (progress < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
@@ -473,9 +433,6 @@ const styles = `
     filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45));
     animation: moveBackFront 4s ease-in-out infinite;
     transform-origin: center bottom;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    will-change: transform;
   }
   @keyframes moveBackFront {
     0%, 100% { transform: translateZ(0) scale(1); filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45)); }
@@ -485,7 +442,7 @@ const styles = `
 
   /* Strong "pop out of nowhere" reveal, retriggered every time the card
      scrolls into view (and reset when it scrolls out) — the easeOutBack
-     curve is what gives it the springy overshoot instead of a plain fade. */
+     curve gives it the springy overshoot instead of a plain fade. */
   .record-pop { opacity: 0; transform: scale(0.4) translateY(20px); }
   .recordCard.in-view .record-pop {
     animation: recordPop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -496,6 +453,7 @@ const styles = `
     from { opacity: 0; transform: scale(0.4) translateY(20px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
   }
+
 
   .philosophy { padding-bottom: 10px; }
   .tally { background: var(--green); border-radius: 18px; padding: 22px 20px 20px; color: #fff; position: relative; overflow: hidden; }
@@ -510,8 +468,6 @@ const styles = `
     background-position: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
     transform-style: preserve-3d;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
     animation: settle 0.4s ease-out both;
   }
   @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
@@ -571,9 +527,6 @@ const styles = `
     width: 78%; height: 78%; object-fit: contain;
     animation: howIconFrontBack 3.6s ease-in-out infinite;
     transform-origin: center bottom;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    will-change: transform;
   }
   @keyframes howIconFrontBack {
     0%, 100% { transform: translateZ(0) scale(1); }
