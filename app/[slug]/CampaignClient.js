@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Script from 'next/script';
 import { supabase } from '../../lib/supabaseClient';
 import VideoPlayer from './VideoPlayer';
+import { BrandIcon, buildShareTargets } from '../../components/shareIcons';
 
 function timeAgo(dateStr) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -75,13 +76,19 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
   const goalTotal = hasTarget ? suggested * targetUnits : 0;
   const isPaused = campaign.status === 'paused';
 
-  const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/${campaign.slug}` : '';
+  // process.env.NEXT_PUBLIC_SITE_URL is inlined at build time — it's
+  // available identically on the server-rendered HTML and the client, so
+  // the share links are correct from the very first paint. Relying on
+  // window.location.origin alone was the actual bug behind "share doesn't
+  // include the real link": window is undefined during server rendering,
+  // so the very first version of these buttons (the static HTML sent to
+  // the phone before React finishes loading) had no URL in them at all —
+  // tapping fast enough sent people to WhatsApp with just the text, no
+  // link. window.location.origin is now only a fallback for local dev.
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== 'undefined' ? window.location.origin : '');
+  const shareUrl = `${siteUrl}/${campaign.slug}`;
   const shareText = `Help ${firstName} — ${campaign.title}`;
-  const shareLinks = {
-    whatsapp: `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`,
-    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
-    x: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
-  };
+  const shareTargets = buildShareTargets(shareUrl, shareText);
 
   function copyShareLink() {
     navigator.clipboard.writeText(shareUrl);
@@ -355,14 +362,45 @@ export default function CampaignClient({ campaign, totals: initialTotals }) {
           {/* Sharing is what actually spreads the fundraiser — make it hard to miss */}
           <div style={styles.shareSection}>
             <div style={styles.shareTitle}>Help {firstName} reach the goal</div>
-            <a href={shareLinks.whatsapp} target="_blank" rel="noreferrer" style={styles.whatsappBtn}>
+            <a
+              href={shareTargets.find((t) => t.key === 'whatsapp').href}
+              target="_blank"
+              rel="noreferrer"
+              style={styles.whatsappBtn}
+            >
+              <BrandIcon name="whatsapp" size={20} />
               Share on WhatsApp
             </a>
-            <div style={styles.shareRow}>
-              <a href={shareLinks.facebook} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>Facebook</a>
-              <a href={shareLinks.x} target="_blank" rel="noreferrer" style={styles.shareSmallBtn}>X</a>
-              <button onClick={copyShareLink} style={styles.shareSmallBtn}>
-                {linkCopied ? 'Copied!' : 'Copy link'}
+            <div style={styles.shareGrid}>
+              {shareTargets
+                .filter((t) => t.key !== 'whatsapp')
+                .map((target) =>
+                  target.kind === 'link' ? (
+                    <a
+                      key={target.key}
+                      href={target.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.shareIconBtn}
+                      title={target.label}
+                    >
+                      <BrandIcon name={target.key} size={18} />
+                      <span>{target.label}</span>
+                    </a>
+                  ) : (
+                    <button
+                      key={target.key}
+                      onClick={copyShareLink}
+                      style={styles.shareIconBtn}
+                      title={target.hint}
+                    >
+                      <BrandIcon name={target.key} size={18} />
+                      <span>{target.label}</span>
+                    </button>
+                  )
+                )}
+              <button onClick={copyShareLink} style={styles.shareIconBtn}>
+                🔗 <span>{linkCopied ? 'Copied!' : 'Copy link'}</span>
               </button>
             </div>
           </div>
@@ -541,7 +579,8 @@ const styles = {
   },
   shareTitle: { fontSize: 15.5, fontWeight: 700, color: '#0B3D2E', marginBottom: 12 },
   whatsappBtn: {
-    display: 'block', textAlign: 'center', width: '100%', boxSizing: 'border-box',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    textAlign: 'center', width: '100%', boxSizing: 'border-box',
     background: '#25D366', color: '#fff', fontSize: 15.5, fontWeight: 700,
     padding: '13px', borderRadius: 10, textDecoration: 'none', marginBottom: 10,
   },
@@ -573,11 +612,15 @@ const styles = {
     display: 'block', fontSize: 14, color: '#0B3D2E', fontWeight: 600, textDecoration: 'none',
     padding: '10px 0', borderBottom: '1px solid #e5e5e5',
   },
-  shareRow: { display: 'flex', gap: 8 },
-  shareSmallBtn: {
-    flex: 1, textAlign: 'center', padding: '10px', borderRadius: 8,
+  shareGrid: {
+    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8,
+  },
+  shareIconBtn: {
+    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5,
+    padding: '10px 6px', borderRadius: 10,
     border: '1px solid #cfe8cf', background: '#fff', color: '#2a6b2a',
-    fontSize: 13, fontWeight: 700, textDecoration: 'none', cursor: 'pointer',
+    fontSize: 11.5, fontWeight: 700, textDecoration: 'none', cursor: 'pointer',
+    lineHeight: 1.2, textAlign: 'center',
   },
   trustLine: {
     marginTop: 18, fontSize: 12, color: '#999', lineHeight: 1.5, textAlign: 'center',
