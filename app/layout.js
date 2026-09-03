@@ -1,6 +1,6 @@
 export const metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
-  title: 'VidFund — Small money adds up',
+  title: 'VidFund — Tell your story',
   description: 'Start a fundraiser where everyone gives a little — and together, it\'s a lot.',
   openGraph: {
     images: ['/vidfund-og-fallback.png'],
