@@ -319,8 +319,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20 }}>
-        <thead>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', marginTop: 20 }}>
+        <table style={{ width: '100%', minWidth: 720, borderCollapse: 'collapse' }}>
+          <thead>
           <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
             <th style={th}>Campaign</th>
             <th style={th}>Creator</th>
@@ -415,7 +416,8 @@ export default function Dashboard() {
             );
           })}
         </tbody>
-      </table>
+        </table>
+      </div>
     </main>
   );
 }
