@@ -431,6 +431,9 @@ const styles = `
     filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45));
     animation: moveBackFront 4s ease-in-out infinite;
     transform-origin: center bottom;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
   }
   @keyframes moveBackFront {
     0%, 100% { transform: translateZ(0) scale(1); filter: drop-shadow(0 14px 18px rgba(0,0,0,0.45)); }
@@ -465,6 +468,9 @@ const styles = `
     background-position: center;
     box-shadow: 0 1px 2px rgba(0,0,0,0.35) inset;
     transform-style: preserve-3d;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
     animation: settle 0.4s ease-out both;
   }
   @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
@@ -524,6 +530,9 @@ const styles = `
     width: 78%; height: 78%; object-fit: contain;
     animation: howIconFrontBack 3.6s ease-in-out infinite;
     transform-origin: center bottom;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    will-change: transform;
   }
   @keyframes howIconFrontBack {
     0%, 100% { transform: translateZ(0) scale(1); }
