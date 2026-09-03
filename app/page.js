@@ -139,25 +139,56 @@ export default function Home() {
         const coin = document.createElement('div');
         coin.className = 'coin';
         coin.style.animationDelay = `${i * 0.02}s`;
+        // Clears 'flip' once a flip actually finishes, so the "is this
+        // coin still mid-flip" check in flipRandomCoins below stays
+        // accurate — without this, the class would just linger forever
+        // after the first flip and make it look like every coin needs a
+        // reflow-forcing restart on every future pick, even long after
+        // it's actually done animating.
+        coin.addEventListener('animationend', (e) => {
+          if (e.animationName === 'flip') coin.classList.remove('flip');
+        });
         cell.appendChild(coin);
         grid.appendChild(cell);
         coins.push(coin);
       }
     }
 
-    // Randomly flip a few coins at a time, forever, so the card feels alive
+    // Randomly flip a few coins at a time, forever, so the card feels alive.
+    //
+    // Forcing a synchronous layout reflow (via offsetWidth) is expensive —
+    // doing it unconditionally, per coin, every 1.4s forever was almost
+    // certainly the real cause of the whole page occasionally shaking: it
+    // was recalculating the page's entire layout up to 4 times a cycle,
+    // indefinitely, for as long as the page stayed open. Most of the time a
+    // freshly-chosen coin isn't already mid-flip, so it can just start the
+    // animation directly with zero reflow cost. A restart (which needs the
+    // reflow trick to actually replay the animation) is only necessary for
+    // a coin that's still mid-flip from an overlapping earlier pick — and
+    // even then, every coin that needs it shares a single reflow instead of
+    // one each.
     function flipRandomCoins() {
       const howMany = 2 + Math.floor(Math.random() * 3); // 2-4 coins
       const chosen = new Set();
       while (chosen.size < howMany && chosen.size < coins.length) {
         chosen.add(Math.floor(Math.random() * coins.length));
       }
+
+      const needsRestart = [];
       chosen.forEach((idx) => {
         const c = coins[idx];
-        c.classList.remove('flip');
-        void c.offsetWidth; // restart animation
-        c.classList.add('flip');
+        if (c.classList.contains('flip')) {
+          needsRestart.push(c);
+        } else {
+          c.classList.add('flip');
+        }
       });
+
+      if (needsRestart.length > 0) {
+        needsRestart.forEach((c) => c.classList.remove('flip'));
+        void document.body.offsetHeight; // one shared forced reflow, not one per coin
+        needsRestart.forEach((c) => c.classList.add('flip'));
+      }
     }
     const flipInterval = setInterval(flipRandomCoins, 1400);
     const flipTimeout = setTimeout(flipRandomCoins, 900);
@@ -202,14 +233,25 @@ export default function Home() {
       amountLineEl.innerHTML = `<span class="fade">You can get ₵${combo.amount} from ${combo.people.toLocaleString()} people</span>`;
     }
 
+    // Updates the total every rAF frame (~60 times/sec) for 900ms was the
+    // real cause of this specific shake — each text change was forcing the
+    // browser to recalculate layout, since the number's width changes as
+    // digits/commas are added while counting up. Throttling to roughly
+    // every 40ms cuts that from ~54 forced layouts down to ~22, which
+    // still reads as a perfectly smooth count-up but is far cheaper —
+    // and it happens every 3.2s, forever, so cutting the cost here matters.
     function countUpTotal() {
       let start = null;
+      let lastUpdate = 0;
       function step(ts) {
         if (!start) start = ts;
         const progress = Math.min((ts - start) / 900, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const val = Math.floor(eased * TARGET);
-        if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
+        if (ts - lastUpdate >= 40 || progress >= 1) {
+          lastUpdate = ts;
+          const eased = 1 - Math.pow(1 - progress, 3);
+          const val = Math.floor(eased * TARGET);
+          if (totalEl) totalEl.textContent = `= ₵${val.toLocaleString()}`;
+        }
         if (progress < 1) requestAnimationFrame(step);
       }
       requestAnimationFrame(step);
@@ -470,7 +512,6 @@ const styles = `
     transform-style: preserve-3d;
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
-    will-change: transform;
     animation: settle 0.4s ease-out both;
   }
   @keyframes settle { from { opacity: 0; transform: scale(0.4); } to { opacity: 1; transform: scale(1); } }
