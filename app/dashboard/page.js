@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 
 const PLATFORM_FEE_PERCENT = 0.05; // keep in sync with .env PLATFORM_FEE_PERCENT
@@ -26,6 +26,8 @@ export default function Dashboard() {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const [payoutsByCampaign, setPayoutsByCampaign] = useState(new Map());
+  const [expandedHistory, setExpandedHistory] = useState(new Set());
   const [reports, setReports] = useState([]);
   const [reportActionLoading, setReportActionLoading] = useState(null); // report id currently processing
 
@@ -124,13 +126,14 @@ export default function Dashboard() {
     // both separately and merging here in JS sidesteps it entirely, and
     // keeps the exact same shape (row.campaigns.title etc.) the rest of
     // this file already expects, so nothing else needs to change.
-    const [totalsRes, campaignsRes] = await Promise.all([
+    const [totalsRes, campaignsRes, payoutsRes] = await Promise.all([
       supabase.from('campaign_totals').select('*'),
       supabase.from('campaigns').select('id, creator_name, creator_momo_number, title, withdrawal_requested_at, fraud_flagged'),
+      supabase.from('payouts').select('*').order('created_at', { ascending: false }),
     ]);
 
-    if (totalsRes.error || campaignsRes.error) {
-      const message = totalsRes.error?.message || campaignsRes.error?.message;
+    if (totalsRes.error || campaignsRes.error || payoutsRes.error) {
+      const message = totalsRes.error?.message || campaignsRes.error?.message || payoutsRes.error?.message;
       console.error('loadCampaigns failed:', message);
       setLoadError(message);
       setCampaigns([]);
@@ -138,6 +141,16 @@ export default function Dashboard() {
       return;
     }
     setLoadError('');
+
+    // Group every past payout by which campaign it belongs to, so each
+    // row can show its own dated payment history without a separate query
+    // per campaign.
+    const payoutsMap = new Map();
+    for (const p of payoutsRes.data || []) {
+      if (!payoutsMap.has(p.campaign_id)) payoutsMap.set(p.campaign_id, []);
+      payoutsMap.get(p.campaign_id).push(p);
+    }
+    setPayoutsByCampaign(payoutsMap);
 
     const campaignsById = new Map((campaignsRes.data || []).map((c) => [c.id, c]));
     const merged = (totalsRes.data || []).map((t) => ({
@@ -190,6 +203,15 @@ export default function Dashboard() {
     }
 
     loadCampaigns();
+  }
+
+  function toggleHistory(campaignId) {
+    setExpandedHistory((prev) => {
+      const next = new Set(prev);
+      if (next.has(campaignId)) next.delete(campaignId);
+      else next.add(campaignId);
+      return next;
+    });
   }
 
   // --- Auth gates ---
@@ -307,6 +329,7 @@ export default function Dashboard() {
             <th style={th}>Unpaid balance</th>
             <th style={th}>You send (after fee)</th>
             <th style={th}></th>
+            <th style={th}></th>
           </tr>
         </thead>
         <tbody>
@@ -314,37 +337,77 @@ export default function Dashboard() {
             const unpaid = Number(c.unpaid_balance || 0);
             const toSend = unpaid * (1 - PLATFORM_FEE_PERCENT);
             const requestedAt = c.campaigns?.withdrawal_requested_at;
+            const history = payoutsByCampaign.get(c.campaign_id) || [];
+            const isExpanded = expandedHistory.has(c.campaign_id);
+            const totalPaidOut = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
             return (
-              <tr key={c.campaign_id} style={{ borderBottom: '1px solid #f0f0f0', background: requestedAt ? '#fff9ec' : 'transparent' }}>
-                <td style={td}>{c.campaigns?.title}</td>
-                <td style={td}>{c.campaigns?.creator_name}</td>
-                <td style={td}>{c.campaigns?.creator_momo_number}</td>
-                <td style={td}>
-                  {requestedAt ? (
-                    <span style={{ color: '#8a5a10', fontWeight: 700, fontSize: 12.5 }}>
-                      Requested {timeAgo(requestedAt)}
-                    </span>
-                  ) : unpaid > 0 ? (
-                    <span style={{ color: '#999', fontSize: 12.5 }}>Not requested</span>
-                  ) : (
-                    <span style={{ color: '#ccc', fontSize: 12.5 }}>—</span>
-                  )}
-                </td>
-                <td style={td}>₵{unpaid.toFixed(2)}</td>
-                <td style={td}>₵{toSend.toFixed(2)}</td>
-                <td style={td}>
-                  {c.campaigns?.fraud_flagged ? (
-                    <span style={{ fontSize: 12, color: '#c0392b', fontWeight: 700 }}>Fraud — blocked</span>
-                  ) : unpaid > 0 && (
-                    <button
-                      onClick={() => markPaidOut(c.campaign_id, unpaid)}
-                      style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#1a7d3c', color: '#fff', cursor: 'pointer' }}
-                    >
-                      Mark paid
-                    </button>
-                  )}
-                </td>
-              </tr>
+              <Fragment key={c.campaign_id}>
+                <tr style={{ borderBottom: '1px solid #f0f0f0', background: requestedAt ? '#fff9ec' : 'transparent' }}>
+                  <td style={td}>{c.campaigns?.title}</td>
+                  <td style={td}>{c.campaigns?.creator_name}</td>
+                  <td style={td}>{c.campaigns?.creator_momo_number}</td>
+                  <td style={td}>
+                    {requestedAt ? (
+                      <span style={{ color: '#8a5a10', fontWeight: 700, fontSize: 12.5 }}>
+                        Requested {timeAgo(requestedAt)}
+                      </span>
+                    ) : unpaid > 0 ? (
+                      <span style={{ color: '#999', fontSize: 12.5 }}>Not requested</span>
+                    ) : (
+                      <span style={{ color: '#ccc', fontSize: 12.5 }}>—</span>
+                    )}
+                  </td>
+                  <td style={td}>₵{unpaid.toFixed(2)}</td>
+                  <td style={td}>₵{toSend.toFixed(2)}</td>
+                  <td style={td}>
+                    {c.campaigns?.fraud_flagged ? (
+                      <span style={{ fontSize: 12, color: '#c0392b', fontWeight: 700 }}>Fraud — blocked</span>
+                    ) : unpaid > 0 && (
+                      <button
+                        onClick={() => markPaidOut(c.campaign_id, unpaid)}
+                        style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: '#1a7d3c', color: '#fff', cursor: 'pointer' }}
+                      >
+                        Mark paid
+                      </button>
+                    )}
+                  </td>
+                  <td style={td}>
+                    {history.length > 0 && (
+                      <button
+                        onClick={() => toggleHistory(c.campaign_id)}
+                        style={{ padding: '5px 10px', borderRadius: 6, border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#333' }}
+                      >
+                        {isExpanded ? '▾' : '▸'} History ({history.length})
+                      </button>
+                    )}
+                  </td>
+                </tr>
+                {isExpanded && history.length > 0 && (
+                  <tr>
+                    <td colSpan={8} style={{ padding: '0 6px 14px', background: '#fafafa' }}>
+                      <div style={{ border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
+                        <div style={{ padding: '8px 12px', fontSize: 12.5, fontWeight: 700, color: '#555', background: '#f3f3f3', borderBottom: '1px solid #eee' }}>
+                          Payout history — ₵{totalPaidOut.toFixed(2)} paid total
+                        </div>
+                        {history.map((p) => (
+                          <div
+                            key={p.id}
+                            style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', fontSize: 13, borderBottom: '1px solid #f2f2f2' }}
+                          >
+                            <span style={{ color: '#666' }}>
+                              {new Date(p.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                              {' · '}
+                              {new Date(p.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            <span style={{ color: '#666' }}>{p.momo_number}</span>
+                            <span style={{ fontWeight: 700, color: '#1a7d3c' }}>₵{Number(p.amount).toFixed(2)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
             );
           })}
         </tbody>
