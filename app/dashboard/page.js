@@ -116,25 +116,38 @@ export default function Dashboard() {
 
   async function loadCampaigns() {
     setLoading(true);
-    // Same issue as loadReports — a failed query here was rendering as an
-    // empty campaign list with no error shown anywhere, which is exactly
-    // what made "nothing came in my admin" impossible to diagnose from the
-    // UI alone.
-    const { data, error } = await supabase
-      .from('campaign_totals')
-      .select('*, campaigns(creator_name, creator_momo_number, title, withdrawal_requested_at, fraud_flagged)')
-      .order('unpaid_balance', { ascending: false });
 
-    if (error) {
-      console.error('loadCampaigns failed:', error.message);
-      setLoadError(error.message);
-    } else {
-      setLoadError('');
+    // campaign_totals is a view (a join + aggregation), and PostgREST can't
+    // reliably auto-detect a relationship from a view back to a real table
+    // for embedding (select('*, campaigns(...)')) — no schema cache reload
+    // fixes this, it's a structural limitation, not a caching bug. Fetching
+    // both separately and merging here in JS sidesteps it entirely, and
+    // keeps the exact same shape (row.campaigns.title etc.) the rest of
+    // this file already expects, so nothing else needs to change.
+    const [totalsRes, campaignsRes] = await Promise.all([
+      supabase.from('campaign_totals').select('*'),
+      supabase.from('campaigns').select('id, creator_name, creator_momo_number, title, withdrawal_requested_at, fraud_flagged'),
+    ]);
+
+    if (totalsRes.error || campaignsRes.error) {
+      const message = totalsRes.error?.message || campaignsRes.error?.message;
+      console.error('loadCampaigns failed:', message);
+      setLoadError(message);
+      setCampaigns([]);
+      setLoading(false);
+      return;
     }
+    setLoadError('');
+
+    const campaignsById = new Map((campaignsRes.data || []).map((c) => [c.id, c]));
+    const merged = (totalsRes.data || []).map((t) => ({
+      ...t,
+      campaigns: campaignsById.get(t.campaign_id) || null,
+    }));
 
     // Requested-and-unpaid first, then by balance — so the ones actually
     // waiting on you surface at the top instead of getting lost in the sort.
-    const sorted = (data || []).sort((a, b) => {
+    const sorted = merged.sort((a, b) => {
       const aRequested = a.campaigns?.withdrawal_requested_at ? 1 : 0;
       const bRequested = b.campaigns?.withdrawal_requested_at ? 1 : 0;
       if (aRequested !== bRequested) return bRequested - aRequested;
