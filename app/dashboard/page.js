@@ -483,9 +483,9 @@ export default function Dashboard() {
                       </tr>
                       {isExpanded && history.length > 0 && (
                         <tr>
-                          <td colSpan={9} style={{ padding: '0 0 14px', background: c.borderSubtle }}>
+                          <td colSpan={9} style={{ padding: '0 0 14px', background: '#EAF1FE' }}>
                             <div style={{ padding: '10px 20px' }}>
-                              <div style={{ fontSize: 12, fontWeight: 600, color: c.textSecondary, marginBottom: 6 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: c.text, marginBottom: 6 }}>
                                 {money(totalPaidOut)} paid total
                               </div>
                               {history.map((p) => (
@@ -493,13 +493,13 @@ export default function Dashboard() {
                                   key={p.id}
                                   style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', fontSize: 13, borderBottom: `1px solid ${c.border}` }}
                                 >
-                                  <span style={{ color: c.textSecondary }}>
+                                  <span style={{ fontWeight: 700, color: c.text }}>
                                     {new Date(p.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                                     {' · '}
                                     {new Date(p.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
                                   </span>
-                                  <span style={{ color: c.textSecondary }}>{p.momo_number}</span>
-                                  <span style={{ ...mono, color: c.text }}>{money(p.amount)}</span>
+                                  <span style={{ fontWeight: 700, color: c.text }}>{p.momo_number}</span>
+                                  <span style={{ ...mono, fontWeight: 700, color: c.text }}>{money(p.amount)}</span>
                                 </div>
                               ))}
                             </div>
