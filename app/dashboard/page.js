@@ -48,6 +48,7 @@ export default function Dashboard() {
   const [expandedHistory, setExpandedHistory] = useState(new Set());
   const [reports, setReports] = useState([]);
   const [reportActionLoading, setReportActionLoading] = useState(null); // report id currently processing
+  const [lightbox, setLightbox] = useState(null); // { src, name } for the enlarged avatar view, or null
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -453,7 +454,12 @@ export default function Dashboard() {
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, textAlign: 'center' }}>
-                            <Avatar src={cRow.campaigns?.cover_image_url} name={cRow.campaigns?.creator_name} size={38} />
+                            <Avatar
+                              src={cRow.campaigns?.cover_image_url}
+                              name={cRow.campaigns?.creator_name}
+                              size={38}
+                              onOpen={() => setLightbox({ src: cRow.campaigns?.cover_image_url, name: cRow.campaigns?.creator_name })}
+                            />
                             <span>{cRow.campaigns?.creator_name}</span>
                           </div>
                         </Td>
@@ -540,7 +546,61 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
+
+      {lightbox && <Lightbox src={lightbox.src} name={lightbox.name} onClose={() => setLightbox(null)} />}
     </>
+  );
+}
+
+function Lightbox({ src, name, onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={name ? `${name}'s photo` : 'Photo'}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(20,16,8,0.72)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 24, zIndex: 1000, cursor: 'zoom-out',
+      }}
+    >
+      <button
+        onClick={onClose}
+        aria-label="Close"
+        style={{
+          position: 'absolute', top: 18, right: 18, width: 36, height: 36, borderRadius: '50%',
+          border: 'none', background: 'rgba(255,255,255,0.15)', color: '#fff', fontSize: 18,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', ...body,
+        }}
+      >
+        ✕
+      </button>
+
+      <div onClick={(e) => e.stopPropagation()} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, cursor: 'default' }}>
+        {src ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={src}
+            alt={name || 'Campaign thumbnail'}
+            style={{ width: 'min(80vw, 360px)', height: 'min(80vw, 360px)', objectFit: 'cover', borderRadius: 16, boxShadow: '0 12px 40px rgba(0,0,0,0.4)' }}
+          />
+        ) : (
+          <div style={{
+            width: 'min(60vw, 220px)', height: 'min(60vw, 220px)', borderRadius: '50%',
+            background: 'linear-gradient(135deg, #F7C168 0%, #E8862E 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+          }}>
+            <svg width="40%" height="40%" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2" />
+              <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+        )}
+        {name && <span style={{ ...heading, fontSize: 17, color: '#fff' }}>{name}</span>}
+      </div>
+    </div>
   );
 }
 
@@ -561,23 +621,30 @@ function StatCell({ value, ok, last }) {
   );
 }
 
-function Avatar({ src, name, size = 30 }) {
+function Avatar({ src, name, size = 30, onOpen }) {
   const base = { width: size, height: size, borderRadius: '50%', flexShrink: 0, border: `1px solid ${c.border}` };
+  const tapProps = onOpen
+    ? { onClick: onOpen, style: { cursor: 'pointer' }, role: 'button', tabIndex: 0, 'aria-label': `View ${name || 'creator'}'s photo larger` }
+    : {};
   if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={name || 'Campaign thumbnail'} style={{ ...base, objectFit: 'cover' }} />
+      <img src={src} alt={name || 'Campaign thumbnail'} style={{ ...base, objectFit: 'cover', cursor: onOpen ? 'pointer' : 'default' }} {...(onOpen ? { onClick: onOpen } : {})} />
     );
   }
   // No video/cover uploaded yet — a warm gradient circle in the brand
   // gold, with a plain white contact glyph, instead of a flat gray tile.
   return (
-    <span style={{
-      ...base, border: 'none',
-      background: 'linear-gradient(135deg, #F7C168 0%, #E8862E 100%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 1px 3px rgba(180,110,20,0.35)',
-    }}>
+    <span
+      {...tapProps}
+      style={{
+        ...base, border: 'none',
+        background: 'linear-gradient(135deg, #F7C168 0%, #E8862E 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 3px rgba(180,110,20,0.35)',
+        ...(tapProps.style || {}),
+      }}
+    >
       <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2" />
         <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
