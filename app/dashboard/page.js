@@ -533,16 +533,18 @@ function Divider() {
 }
 
 function Th({ children, align, last }) {
-  if (!children) return <th style={{ padding: '0 10px 10px 0' }} />;
+  if (!children) {
+    return (
+      <th style={{ padding: '9px 14px', background: '#F2A93B', borderRight: last ? 'none' : `3px solid ${c.lineBlue}` }} />
+    );
+  }
   return (
     <th style={{
-      padding: '0 14px 10px 0', textAlign: align || 'left',
+      padding: '9px 14px', textAlign: align || 'left',
+      background: '#F2A93B',
       borderRight: last ? 'none' : `3px solid ${c.lineBlue}`,
     }}>
-      <span style={{
-        ...heading, fontSize: 11.5, color: c.text, background: '#F2A93B',
-        padding: '5px 11px', borderRadius: 6, display: 'inline-block', whiteSpace: 'nowrap',
-      }}>
+      <span style={{ ...heading, fontSize: 11.5, color: c.text, whiteSpace: 'nowrap' }}>
         {children}
       </span>
     </th>
