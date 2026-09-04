@@ -424,7 +424,7 @@ export default function Dashboard() {
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: `3px solid ${c.lineBlue}` }}>
                   <Th>Campaign</Th>
-                  <Th>Creator</Th>
+                  <Th align="center">Creator</Th>
                   <Th align="center">Account</Th>
                   <Th>MoMo</Th>
                   <Th>Status</Th>
@@ -450,8 +450,8 @@ export default function Dashboard() {
                       <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                            <Avatar src={cRow.campaigns?.cover_image_url} name={cRow.campaigns?.creator_name} />
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, textAlign: 'center' }}>
+                            <Avatar src={cRow.campaigns?.cover_image_url} name={cRow.campaigns?.creator_name} size={38} />
                             <span>{cRow.campaigns?.creator_name}</span>
                           </div>
                         </Td>
@@ -559,8 +559,8 @@ function StatCell({ value, ok, last }) {
   );
 }
 
-function Avatar({ src, name }) {
-  const base = { width: 30, height: 30, borderRadius: '50%', flexShrink: 0, border: `1px solid ${c.border}` };
+function Avatar({ src, name, size = 30 }) {
+  const base = { width: size, height: size, borderRadius: '50%', flexShrink: 0, border: `1px solid ${c.border}` };
   if (src) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -571,7 +571,7 @@ function Avatar({ src, name }) {
   // same shape/size as the real thumbnail so rows don't jump around.
   return (
     <span style={{ ...base, background: c.borderSubtle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="8" r="4" stroke={c.textMuted} strokeWidth="2" />
         <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke={c.textMuted} strokeWidth="2" strokeLinecap="round" />
       </svg>
