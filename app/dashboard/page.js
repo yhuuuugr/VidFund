@@ -428,7 +428,7 @@ export default function Dashboard() {
                   <Th>Campaign</Th>
                   <Th align="center">Creator</Th>
                   <Th align="center">Account</Th>
-                  <Th>MoMo</Th>
+                  <Th align="center">MoMo</Th>
                   <Th>Status</Th>
                   <Th align="right">Unpaid</Th>
                   <Th align="right">You send</Th>
@@ -465,7 +465,7 @@ export default function Dashboard() {
                             {cRow.campaigns?.creator_email || 'no account'}
                           </span>
                         </Td>
-                        <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
+                        <Td align="center" style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
                         <Td>
                           {isFraud ? (
                             <span style={{ fontSize: 12, fontWeight: 600, color: c.text, textDecoration: 'underline' }}>Fraud — blocked</span>
