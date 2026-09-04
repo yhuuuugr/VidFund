@@ -146,7 +146,7 @@ export default function Dashboard() {
     // this file already expects, so nothing else needs to change.
     const [totalsRes, campaignsRes, payoutsRes] = await Promise.all([
       supabase.from('campaign_totals').select('*'),
-      supabase.from('campaigns').select('id, creator_name, creator_email, creator_momo_number, title, withdrawal_requested_at, fraud_flagged'),
+      supabase.from('campaigns').select('id, creator_name, creator_email, creator_momo_number, title, withdrawal_requested_at, fraud_flagged, cover_image_url'),
       supabase.from('payouts').select('*').order('created_at', { ascending: false }),
     ]);
 
@@ -449,9 +449,19 @@ export default function Dashboard() {
                     <Fragment key={cRow.campaign_id}>
                       <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
-                        <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_name}</Td>
+                        <Td style={{ fontWeight: 700, color: c.text }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <Avatar src={cRow.campaigns?.cover_image_url} name={cRow.campaigns?.creator_name} />
+                            <span>{cRow.campaigns?.creator_name}</span>
+                          </div>
+                        </Td>
                         <Td align="center" style={{ fontWeight: 700, color: c.lineBlue, fontSize: 12.5 }}>
-                          {cRow.campaigns?.creator_email || 'no account'}
+                          <span
+                            title={cRow.campaigns?.creator_email || ''}
+                            style={{ display: 'inline-block', maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'bottom' }}
+                          >
+                            {cRow.campaigns?.creator_email || 'no account'}
+                          </span>
                         </Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
                         <Td>
@@ -546,6 +556,26 @@ function StatCell({ value, ok, last }) {
         <span style={{ ...mono, fontSize: 22, fontWeight: 700, color: c.text }}>{value}</span>
       </div>
     </td>
+  );
+}
+
+function Avatar({ src, name }) {
+  const base = { width: 30, height: 30, borderRadius: '50%', flexShrink: 0, border: `1px solid ${c.border}` };
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={name || 'Campaign thumbnail'} style={{ ...base, objectFit: 'cover' }} />
+    );
+  }
+  // No video/cover uploaded yet — a simple generic contact silhouette,
+  // same shape/size as the real thumbnail so rows don't jump around.
+  return (
+    <span style={{ ...base, background: c.borderSubtle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="4" stroke={c.textMuted} strokeWidth="2" />
+        <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke={c.textMuted} strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    </span>
   );
 }
 
