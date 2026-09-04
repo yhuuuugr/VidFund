@@ -434,31 +434,30 @@ export default function Dashboard() {
                   const history = payoutsByCampaign.get(cRow.campaign_id) || [];
                   const isExpanded = expandedHistory.has(cRow.campaign_id);
                   const totalPaidOut = history.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-                  const dim = !isFraud && !requestedAt && unpaid === 0;
                   const needsAttention = isFraud || requestedAt;
 
                   return (
                     <Fragment key={cRow.campaign_id}>
                       <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
-                        <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_name}</Td>
-                        <Td style={{ color: cRow.campaigns?.creator_email ? c.textSecondary : c.textMuted, fontSize: 12 }}>
+                        <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_name}</Td>
+                        <Td style={{ fontWeight: 700, color: c.text, fontSize: 12.5 }}>
                           {cRow.campaigns?.creator_email || 'no account'}
                         </Td>
-                        <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
+                        <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
                         <Td>
                           {isFraud ? (
                             <span style={{ fontSize: 12, fontWeight: 600, color: c.text, textDecoration: 'underline' }}>Fraud — blocked</span>
                           ) : requestedAt ? (
                             <span style={{ fontSize: 12, fontWeight: 600, color: c.text }}>Requested {timeAgo(requestedAt)}</span>
                           ) : unpaid > 0 ? (
-                            <span style={{ fontSize: 12, color: c.textSecondary }}>Not requested</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>Not requested</span>
                           ) : (
-                            <span style={{ fontSize: 12, color: c.textMuted }}>—</span>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>—</span>
                           )}
                         </Td>
-                        <Td align="right" style={{ ...mono, fontSize: 13, color: dim ? c.textMuted : c.text }}>{money(unpaid)}</Td>
-                        <Td align="right" style={{ ...mono, fontSize: 13, color: dim ? c.textMuted : c.text }}>{unpaid > 0 ? money(toSend) : '—'}</Td>
+                        <Td align="right" style={{ ...mono, fontSize: 13, fontWeight: 700, color: c.text }}>{money(unpaid)}</Td>
+                        <Td align="right" style={{ ...mono, fontSize: 13, fontWeight: 700, color: c.text }}>{unpaid > 0 ? money(toSend) : '—'}</Td>
                         <Td>
                           {isFraud ? (
                             <span style={{ fontSize: 11.5, color: c.textMuted, fontStyle: 'italic' }}>Payout disabled</span>
