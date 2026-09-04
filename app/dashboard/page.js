@@ -13,6 +13,7 @@ const c = {
   text: '#1A1A1A',
   textSecondary: '#5B5A53',
   textMuted: '#A8A59A',
+  lineBlue: '#2E6BE6',
 };
 
 const heading = { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700 };
@@ -412,7 +413,7 @@ export default function Dashboard() {
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ textAlign: 'left', borderBottom: `2px solid ${c.border}` }}>
+                <tr style={{ textAlign: 'left', borderBottom: `3px solid ${c.lineBlue}` }}>
                   <Th>Campaign</Th>
                   <Th>Creator</Th>
                   <Th>Account</Th>
@@ -438,7 +439,7 @@ export default function Dashboard() {
 
                   return (
                     <Fragment key={cRow.campaign_id}>
-                      <tr style={{ borderBottom: `2px solid ${c.border}` }}>
+                      <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_name}</Td>
                         <Td style={{ color: cRow.campaigns?.creator_email ? c.textSecondary : c.textMuted, fontSize: 12 }}>
@@ -536,7 +537,7 @@ function Th({ children, align, last }) {
   return (
     <th style={{
       padding: '0 14px 10px 0', textAlign: align || 'left',
-      borderRight: last ? 'none' : `2px solid ${c.border}`,
+      borderRight: last ? 'none' : `3px solid ${c.lineBlue}`,
     }}>
       <span style={{
         ...heading, fontSize: 11.5, color: c.text, background: '#F2A93B',
@@ -552,7 +553,7 @@ function Td({ children, align, style, last }) {
   return (
     <td style={{
       padding: '11px 14px 11px 0', fontSize: 13.5, textAlign: align || 'left',
-      borderRight: last ? 'none' : `2px solid ${c.border}`,
+      borderRight: last ? 'none' : `3px solid ${c.lineBlue}`,
       ...body, ...style,
     }}>
       {children}
