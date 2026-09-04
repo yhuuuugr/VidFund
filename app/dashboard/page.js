@@ -425,7 +425,7 @@ export default function Dashboard() {
                 <tr style={{ textAlign: 'left', borderBottom: `3px solid ${c.lineBlue}` }}>
                   <Th>Campaign</Th>
                   <Th>Creator</Th>
-                  <Th>Account</Th>
+                  <Th align="center">Account</Th>
                   <Th>MoMo</Th>
                   <Th>Status</Th>
                   <Th align="right">Unpaid</Th>
@@ -450,7 +450,7 @@ export default function Dashboard() {
                       <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_name}</Td>
-                        <Td style={{ fontWeight: 700, color: c.lineBlue, fontSize: 12.5 }}>
+                        <Td align="center" style={{ fontWeight: 700, color: c.lineBlue, fontSize: 12.5 }}>
                           {cRow.campaigns?.creator_email || 'no account'}
                         </Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
