@@ -412,7 +412,7 @@ export default function Dashboard() {
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse' }}>
               <thead>
-                <tr style={{ textAlign: 'left', borderBottom: `1px solid ${c.border}` }}>
+                <tr style={{ textAlign: 'left', borderBottom: `2px solid ${c.border}` }}>
                   <Th>Campaign</Th>
                   <Th>Creator</Th>
                   <Th>Account</Th>
@@ -421,7 +421,7 @@ export default function Dashboard() {
                   <Th align="right">Unpaid</Th>
                   <Th align="right">You send</Th>
                   <Th></Th>
-                  <Th></Th>
+                  <Th last></Th>
                 </tr>
               </thead>
               <tbody>
@@ -438,7 +438,7 @@ export default function Dashboard() {
 
                   return (
                     <Fragment key={cRow.campaign_id}>
-                      <tr style={{ borderBottom: `1px solid ${c.borderSubtle}` }}>
+                      <tr style={{ borderBottom: `2px solid ${c.border}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ color: dim ? c.textMuted : c.text }}>{cRow.campaigns?.creator_name}</Td>
                         <Td style={{ color: cRow.campaigns?.creator_email ? c.textSecondary : c.textMuted, fontSize: 12 }}>
@@ -470,7 +470,7 @@ export default function Dashboard() {
                             </button>
                           )}
                         </Td>
-                        <Td>
+                        <Td last>
                           {history.length > 0 && (
                             <button
                               onClick={() => toggleHistory(cRow.campaign_id)}
@@ -531,10 +531,13 @@ function Divider() {
   return <div style={{ width: 1, background: c.border, margin: '2px 24px' }} />;
 }
 
-function Th({ children, align }) {
+function Th({ children, align, last }) {
   if (!children) return <th style={{ padding: '0 10px 10px 0' }} />;
   return (
-    <th style={{ padding: '0 10px 10px 0', textAlign: align || 'left' }}>
+    <th style={{
+      padding: '0 14px 10px 0', textAlign: align || 'left',
+      borderRight: last ? 'none' : `2px solid ${c.border}`,
+    }}>
       <span style={{
         ...heading, fontSize: 11.5, color: c.text, background: '#F2A93B',
         padding: '5px 11px', borderRadius: 6, display: 'inline-block', whiteSpace: 'nowrap',
@@ -545,9 +548,13 @@ function Th({ children, align }) {
   );
 }
 
-function Td({ children, align, style }) {
+function Td({ children, align, style, last }) {
   return (
-    <td style={{ padding: '11px 10px 11px 0', fontSize: 13.5, textAlign: align || 'left', ...body, ...style }}>
+    <td style={{
+      padding: '11px 14px 11px 0', fontSize: 13.5, textAlign: align || 'left',
+      borderRight: last ? 'none' : `2px solid ${c.border}`,
+      ...body, ...style,
+    }}>
       {children}
     </td>
   );
