@@ -325,22 +325,24 @@ export default function Dashboard() {
         </div>
 
         {/* Stat strip */}
-        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '22px 0' }}>
-          <thead>
-            <tr>
-              <Th>Pending reports</Th>
-              <Th>Total unpaid balance</Th>
-              <Th last>Withdrawals requested</Th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
-              <StatCell value={reports.length} ok={reports.length === 0} />
-              <StatCell value={money(totalUnpaid)} ok={totalUnpaid === 0} />
-              <StatCell value={requestedCount} ok={requestedCount === 0} last />
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', margin: '22px 0' }}>
+          <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <Th>Pending reports</Th>
+                <Th>Total unpaid balance</Th>
+                <Th last>Withdrawals requested</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
+                <StatCell value={reports.length} ok={reports.length === 0} />
+                <StatCell value={money(totalUnpaid)} ok={totalUnpaid === 0} />
+                <StatCell value={requestedCount} ok={requestedCount === 0} last />
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {loadError && (
           <div style={{ border: `1px solid ${c.text}`, color: c.text, padding: '12px 14px', borderRadius: 8, marginBottom: 20, fontSize: 13.5 }}>
@@ -567,13 +569,18 @@ function Avatar({ src, name, size = 30 }) {
       <img src={src} alt={name || 'Campaign thumbnail'} style={{ ...base, objectFit: 'cover' }} />
     );
   }
-  // No video/cover uploaded yet — a simple generic contact silhouette,
-  // same shape/size as the real thumbnail so rows don't jump around.
+  // No video/cover uploaded yet — a warm gradient circle in the brand
+  // gold, with a plain white contact glyph, instead of a flat gray tile.
   return (
-    <span style={{ ...base, background: c.borderSubtle, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="4" stroke={c.textMuted} strokeWidth="2" />
-        <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke={c.textMuted} strokeWidth="2" strokeLinecap="round" />
+    <span style={{
+      ...base, border: 'none',
+      background: 'linear-gradient(135deg, #F7C168 0%, #E8862E 100%)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 1px 3px rgba(180,110,20,0.35)',
+    }}>
+      <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2" />
+        <path d="M4 20c0-4 4-6 8-6s8 2 8 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
       </svg>
     </span>
   );
