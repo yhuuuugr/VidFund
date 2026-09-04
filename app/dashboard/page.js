@@ -450,7 +450,7 @@ export default function Dashboard() {
                       <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
                         <Td style={{ borderLeft: needsAttention ? `2px solid ${c.text}` : '2px solid transparent', fontWeight: 600 }}>{cRow.campaigns?.title}</Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_name}</Td>
-                        <Td style={{ fontWeight: 700, color: c.text, fontSize: 12.5 }}>
+                        <Td style={{ fontWeight: 700, color: c.lineBlue, fontSize: 12.5 }}>
                           {cRow.campaigns?.creator_email || 'no account'}
                         </Td>
                         <Td style={{ fontWeight: 700, color: c.text }}>{cRow.campaigns?.creator_momo_number}</Td>
@@ -458,7 +458,12 @@ export default function Dashboard() {
                           {isFraud ? (
                             <span style={{ fontSize: 12, fontWeight: 600, color: c.text, textDecoration: 'underline' }}>Fraud — blocked</span>
                           ) : requestedAt ? (
-                            <span style={{ fontSize: 12, fontWeight: 600, color: c.text }}>Requested {timeAgo(requestedAt)}</span>
+                            <div>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: c.text }}>Requested {timeAgo(requestedAt)}</div>
+                              <div style={{ fontSize: 11.5, fontWeight: 700, color: c.lineBlue, marginTop: 2 }}>
+                                {cRow.campaigns?.creator_email || cRow.campaigns?.creator_momo_number}
+                              </div>
+                            </div>
                           ) : unpaid > 0 ? (
                             <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>Not requested</span>
                           ) : (
