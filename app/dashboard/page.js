@@ -325,13 +325,22 @@ export default function Dashboard() {
         </div>
 
         {/* Stat strip */}
-        <div style={{ display: 'flex', padding: '22px 0' }}>
-          <Stat label="Pending reports" value={reports.length} strong={reports.length > 0} />
-          <Divider />
-          <Stat label="Total unpaid balance" value={money(totalUnpaid)} />
-          <Divider />
-          <Stat label="Withdrawals requested" value={requestedCount} strong={requestedCount > 0} />
-        </div>
+        <table style={{ width: '100%', borderCollapse: 'collapse', margin: '22px 0' }}>
+          <thead>
+            <tr>
+              <Th>Pending reports</Th>
+              <Th>Total unpaid balance</Th>
+              <Th last>Withdrawals requested</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style={{ borderBottom: `3px solid ${c.lineBlue}` }}>
+              <StatCell value={reports.length} ok={reports.length === 0} />
+              <StatCell value={money(totalUnpaid)} ok={totalUnpaid === 0} />
+              <StatCell value={requestedCount} ok={requestedCount === 0} last />
+            </tr>
+          </tbody>
+        </table>
 
         {loadError && (
           <div style={{ border: `1px solid ${c.text}`, color: c.text, padding: '12px 14px', borderRadius: 8, marginBottom: 20, fontSize: 13.5 }}>
@@ -518,17 +527,21 @@ export default function Dashboard() {
   );
 }
 
-function Stat({ label, value, strong }) {
+function StatCell({ value, ok, last }) {
   return (
-    <div style={{ flex: 1 }}>
-      <div style={{ ...mono, fontSize: 22, color: strong ? c.text : c.textSecondary }}>{value}</div>
-      <div style={{ fontSize: 12, color: c.textMuted, marginTop: 3 }}>{label}</div>
-    </div>
+    <td style={{
+      padding: '16px 14px', textAlign: 'left',
+      borderRight: last ? 'none' : `3px solid ${c.lineBlue}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+        <span style={{
+          width: 10, height: 10, borderRadius: '50%', flexShrink: 0,
+          background: ok ? '#1A7D3C' : '#D64545',
+        }} />
+        <span style={{ ...mono, fontSize: 22, fontWeight: 700, color: c.text }}>{value}</span>
+      </div>
+    </td>
   );
-}
-
-function Divider() {
-  return <div style={{ width: 1, background: c.border, margin: '2px 24px' }} />;
 }
 
 function Th({ children, align, last }) {
